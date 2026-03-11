@@ -301,6 +301,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Cannot complete: Time has not passed or Customer not checked in (BR-O6)'**
   String get cannotCompleteError;
+
+  /// No description provided for @bookNow.
+  ///
+  /// In en, this message translates to:
+  /// **'Book Now'**
+  String get bookNow;
+
+  /// No description provided for @selectCourt.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Court'**
+  String get selectCourt;
+
+  /// No description provided for @selectSlot.
+  ///
+  /// In en, this message translates to:
+  /// **'Select Slot'**
+  String get selectSlot;
+
+  /// No description provided for @confirmBooking.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm Booking'**
+  String get confirmBooking;
+
+  /// No description provided for @bookingSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Booking Successful!'**
+  String get bookingSuccess;
+
+  /// No description provided for @available.
+  ///
+  /// In en, this message translates to:
+  /// **'AVAILABLE'**
+  String get available;
+
+  /// No description provided for @maintenance.
+  ///
+  /// In en, this message translates to:
+  /// **'MAINTENANCE'**
+  String get maintenance;
 }
 
 class _AppLocalizationsDelegate

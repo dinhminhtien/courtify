@@ -33,5 +33,12 @@
   "redirectingToPayment": "Đang chuyển hướng đến VNPay / Momo...",
   "bookingUpdated": "Đã cập nhật lượt đặt",
   "bookingCancelledSuccessfully": "Đã hủy lượt đặt thành công.",
-  "cannotCompleteError": "Không thể hoàn thành: Chưa đến giờ hoặc Khách chưa nhận sân (BR-O6)"
+  "cannotCompleteError": "Không thể hoàn thành: Chưa đến giờ hoặc Khách chưa nhận sân (BR-O6)",
+  "bookNow": "Đặt sân ngay",
+  "selectCourt": "Chọn sân",
+  "selectSlot": "Chọn giờ chơi",
+  "confirmBooking": "Xác nhận đặt sân",
+  "bookingSuccess": "Đặt sân thành công!",
+  "available": "CÒN TRỐNG",
+  "maintenance": "ĐANG BẢO TRÌ"
 }

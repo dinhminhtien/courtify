@@ -111,4 +111,25 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get cannotCompleteError =>
       'Không thể hoàn thành: Chưa đến giờ hoặc Khách chưa nhận sân (BR-O6)';
+
+  @override
+  String get bookNow => 'Đặt sân ngay';
+
+  @override
+  String get selectCourt => 'Chọn sân';
+
+  @override
+  String get selectSlot => 'Chọn giờ chơi';
+
+  @override
+  String get confirmBooking => 'Xác nhận đặt sân';
+
+  @override
+  String get bookingSuccess => 'Đặt sân thành công!';
+
+  @override
+  String get available => 'CÒN TRỐNG';
+
+  @override
+  String get maintenance => 'ĐANG BẢO TRÌ';
 }

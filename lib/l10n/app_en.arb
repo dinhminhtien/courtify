@@ -33,5 +33,12 @@
   "redirectingToPayment": "Redirecting to VNPay / Momo...",
   "bookingUpdated": "Booking Updated",
   "bookingCancelledSuccessfully": "Booking Cancelled Successfully.",
-  "cannotCompleteError": "Cannot complete: Time has not passed or Customer not checked in (BR-O6)"
+  "cannotCompleteError": "Cannot complete: Time has not passed or Customer not checked in (BR-O6)",
+  "bookNow": "Book Now",
+  "selectCourt": "Select Court",
+  "selectSlot": "Select Slot",
+  "confirmBooking": "Confirm Booking",
+  "bookingSuccess": "Booking Successful!",
+  "available": "AVAILABLE",
+  "maintenance": "MAINTENANCE"
 }

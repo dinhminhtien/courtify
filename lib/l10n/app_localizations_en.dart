@@ -111,4 +111,25 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get cannotCompleteError =>
       'Cannot complete: Time has not passed or Customer not checked in (BR-O6)';
+
+  @override
+  String get bookNow => 'Book Now';
+
+  @override
+  String get selectCourt => 'Select Court';
+
+  @override
+  String get selectSlot => 'Select Slot';
+
+  @override
+  String get confirmBooking => 'Confirm Booking';
+
+  @override
+  String get bookingSuccess => 'Booking Successful!';
+
+  @override
+  String get available => 'AVAILABLE';
+
+  @override
+  String get maintenance => 'MAINTENANCE';
 }
