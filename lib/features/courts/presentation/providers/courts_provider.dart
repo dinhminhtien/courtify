@@ -2,13 +2,22 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
-import '../../../../core/config/supabase_config.dart';
+import '../../domain/entities/court.dart';
+import '../../domain/entities/court_slot.dart';
+import '../../domain/repositories/courts_repository.dart';
+import '../../data/repositories/supabase_courts_repository.dart';
+
+// ─── Repository Provider ──────────────────────────────────────────────────────
+
+final courtsRepositoryProvider = Provider<CourtsRepository>((ref) {
+  return SupabaseCourtsRepository();
+});
 
 // ─── Courts State ─────────────────────────────────────────────────────────────
 
 class CourtsState {
-  final List<Court> courts;
-  final List<CourtSlot> slots;
+  final List<CourtEntity> courts;
+  final List<CourtSlotEntity> slots;
   final bool isLoading;
   final String? error;
   final int selectedCourtIndex;
@@ -24,8 +33,8 @@ class CourtsState {
   }) : selectedDate = selectedDate ?? DateTime.now();
 
   CourtsState copyWith({
-    List<Court>? courts,
-    List<CourtSlot>? slots,
+    List<CourtEntity>? courts,
+    List<CourtSlotEntity>? slots,
     bool? isLoading,
     String? error,
     int? selectedCourtIndex,
@@ -46,11 +55,12 @@ class CourtsState {
 // ─── Courts Notifier ──────────────────────────────────────────────────────────
 
 class CourtsNotifier extends Notifier<CourtsState> {
-  final CourtsService _courtsService = CourtsService();
+  late final CourtsRepository _courtsRepository;
   RealtimeChannel? _slotsSubscription;
 
   @override
   CourtsState build() {
+    _courtsRepository = ref.watch(courtsRepositoryProvider);
     ref.onDispose(() {
       _slotsSubscription?.unsubscribe();
     });
@@ -62,7 +72,7 @@ class CourtsNotifier extends Notifier<CourtsState> {
   Future<void> loadInitialData() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final courts = await _courtsService.getCourts();
+      final courts = await _courtsRepository.getCourts();
       state = state.copyWith(courts: courts, isLoading: false);
       if (courts.isNotEmpty) {
         await loadSlots();
@@ -79,7 +89,7 @@ class CourtsNotifier extends Notifier<CourtsState> {
     state = state.copyWith(isLoading: true);
     try {
       final court = state.courts[state.selectedCourtIndex];
-      final slots = await _courtsService.getSlotsForCourtAndDate(
+      final slots = await _courtsRepository.getSlotsForCourtAndDate(
         courtId: court.id,
         date: state.selectedDate,
       );
@@ -94,7 +104,7 @@ class CourtsNotifier extends Notifier<CourtsState> {
     _slotsSubscription?.unsubscribe();
     if (state.courts.isEmpty) return;
     final court = state.courts[state.selectedCourtIndex];
-    _slotsSubscription = _courtsService.subscribeToSlots(
+    _slotsSubscription = _courtsRepository.subscribeToSlots(
       courtId: court.id,
       date: state.selectedDate,
       onUpdate: (updatedSlots) {

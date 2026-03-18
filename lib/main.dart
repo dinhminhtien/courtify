@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'core/config/supabase_config.dart';
+import 'core/api/supabase_client.dart';
 import 'shared/widgets/custom_error_widget.dart';
 import 'core/app_export.dart';
 
@@ -11,7 +11,7 @@ void main() async {
 
   // Initialize Supabase
   try {
-    await SupabaseService.initialize();
+    await SupabaseClientManager.initialize();
   } catch (e) {
     debugPrint('Failed to initialize Supabase: $e');
   }

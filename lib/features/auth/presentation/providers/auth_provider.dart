@@ -2,19 +2,27 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
-import '../../../../core/config/supabase_config.dart';
+import '../../domain/entities/user_entity.dart';
+import '../../domain/repositories/auth_repository.dart';
+import '../../data/repositories/supabase_auth_repository.dart';
+
+// ─── Repository Provider ──────────────────────────────────────────────────────
+
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return SupabaseAuthRepository();
+});
 
 // ─── Auth State ───────────────────────────────────────────────────────────────
 
 class AuthState {
-  final CourtifyUser? user;
+  final UserEntity? user;
   final bool isLoading;
   final String? error;
 
   const AuthState({this.user, this.isLoading = false, this.error});
 
   AuthState copyWith({
-    CourtifyUser? user,
+    UserEntity? user,
     bool? isLoading,
     String? error,
     bool clearUser = false,
@@ -31,17 +39,18 @@ class AuthState {
 // ─── Auth Notifier ────────────────────────────────────────────────────────────
 
 class AuthNotifier extends Notifier<AuthState> {
-  final AuthService _authService = AuthService();
+  late final AuthRepository _authRepository;
 
   @override
   AuthState build() {
+    _authRepository = ref.watch(authRepositoryProvider);
     Future.microtask(() => _init());
     return const AuthState(isLoading: true);
   }
 
   Future<void> _init() async {
     try {
-      final user = await _authService.getCurrentUserProfile();
+      final user = await _authRepository.getCurrentUserProfile();
       state = state.copyWith(user: user, isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false);
@@ -51,12 +60,12 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<bool> signIn({required String email, required String password}) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final response = await _authService.signInWithEmail(
+      final response = await _authRepository.signInWithEmail(
         email: email,
         password: password,
       );
       if (response.user != null) {
-        final profile = await _authService.getCurrentUserProfile();
+        final profile = await _authRepository.getCurrentUserProfile();
         state = state.copyWith(user: profile, isLoading: false);
         return true;
       }
@@ -79,13 +88,13 @@ class AuthNotifier extends Notifier<AuthState> {
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      await _authService.signUpWithEmail(
+      await _authRepository.signUpWithEmail(
         email: email,
         password: password,
         fullName: fullName,
         phone: phone,
       );
-      final profile = await _authService.getCurrentUserProfile();
+      final profile = await _authRepository.getCurrentUserProfile();
       state = state.copyWith(user: profile, isLoading: false);
       return true;
     } on AuthException catch (e) {
@@ -100,9 +109,9 @@ class AuthNotifier extends Notifier<AuthState> {
   Future<bool> signInWithGoogle() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final success = await _authService.signInWithGoogle();
+      final success = await _authRepository.signInWithGoogle();
       if (success) {
-        final profile = await _authService.getCurrentUserProfile();
+        final profile = await _authRepository.getCurrentUserProfile();
         state = state.copyWith(user: profile, isLoading: false);
       } else {
         state = state.copyWith(isLoading: false);
@@ -115,20 +124,20 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   Future<void> signOut() async {
-    await _authService.signOut();
+    await _authRepository.signOut();
     state = const AuthState(user: null);
   }
 
   Future<void> refreshProfile() async {
     try {
-      final profile = await _authService.getCurrentUserProfile();
+      final profile = await _authRepository.getCurrentUserProfile();
       state = state.copyWith(user: profile);
     } catch (e) {
       debugPrint('Refresh profile error: $e');
     }
   }
 
-  bool get isLoggedIn => _authService.isLoggedIn;
+  bool get isLoggedIn => _authRepository.isLoggedIn;
 }
 
 // ─── Providers ────────────────────────────────────────────────────────────────
@@ -137,7 +146,7 @@ final authProvider = NotifierProvider<AuthNotifier, AuthState>(() {
   return AuthNotifier();
 });
 
-final currentUserProvider = Provider<CourtifyUser?>((ref) {
+final currentUserProvider = Provider<UserEntity?>((ref) {
   return ref.watch(authProvider).user;
 });
 

@@ -1,7 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/config/supabase_config.dart';
+import '../../domain/entities/booking.dart';
+import '../../domain/repositories/bookings_repository.dart';
+import '../../data/repositories/supabase_bookings_repository.dart';
+
+// ─── Repository Provider ──────────────────────────────────────────────────────
+
+final bookingsRepositoryProvider = Provider<BookingsRepository>((ref) {
+  return SupabaseBookingsRepository();
+});
 
 // ─── Bookings State ───────────────────────────────────────────────────────────
 
@@ -46,17 +54,18 @@ class BookingsState {
 // ─── Bookings Notifier ────────────────────────────────────────────────────────
 
 class BookingsNotifier extends Notifier<BookingsState> {
-  final BookingsService _bookingsService = BookingsService();
+  late final BookingsRepository _bookingsRepository;
 
   @override
   BookingsState build() {
+    _bookingsRepository = ref.watch(bookingsRepositoryProvider);
     return const BookingsState();
   }
 
   Future<void> loadUserBookings() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final bookings = await _bookingsService.getUserBookings();
+      final bookings = await _bookingsRepository.getUserBookings();
       state = state.copyWith(
         bookings: bookings.map((b) => b.toDisplayMap()).toList(),
         isLoading: false,
@@ -70,7 +79,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
   Future<void> loadAllBookings() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final bookings = await _bookingsService.getAllBookings();
+      final bookings = await _bookingsRepository.getAllBookings();
       state = state.copyWith(
         bookings: bookings.map((b) => b.toDisplayMap()).toList(),
         isLoading: false,
@@ -81,13 +90,13 @@ class BookingsNotifier extends Notifier<BookingsState> {
     }
   }
 
-  Future<Booking?> createBooking({
+  Future<BookingEntity?> createBooking({
     required List<String> slotIds,
     required String courtId,
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final booking = await _bookingsService.createBooking(
+      final booking = await _bookingsRepository.createBooking(
         slotIds: slotIds,
         courtId: courtId,
       );
@@ -112,7 +121,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
 
   Future<void> cancelBooking(String bookingId) async {
     try {
-      await _bookingsService.cancelBooking(bookingId);
+      await _bookingsRepository.cancelBooking(bookingId);
       await loadUserBookings();
     } catch (e) {
       debugPrint('Cancel booking error: $e');
@@ -122,7 +131,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
 
   Future<void> confirmBooking(String bookingId) async {
     try {
-      await _bookingsService.confirmBooking(bookingId);
+      await _bookingsRepository.confirmBooking(bookingId);
       await loadAllBookings();
     } catch (e) {
       debugPrint('Confirm booking error: $e');
@@ -132,7 +141,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
 
   Future<void> completeBooking(String bookingId) async {
     try {
-      await _bookingsService.completeBooking(bookingId);
+      await _bookingsRepository.completeBooking(bookingId);
       await loadAllBookings();
     } catch (e) {
       debugPrint('Complete booking error: $e');
