@@ -35,11 +35,25 @@ class SupabaseAuthRepository implements AuthRepository {
     required String fullName,
     String? phone,
   }) async {
-    return await _client.auth.signUp(
+    final response = await _client.auth.signUp(
       email: email,
       password: password,
       data: {'full_name': fullName, 'phone': phone, 'role': 'customer'},
     );
+
+    if (response.user != null) {
+      // Create profile record in public "users" table
+      await _client.from('users').upsert({
+        'id': response.user!.id,
+        'email': email,
+        'full_name': fullName,
+        'phone': phone,
+        'role': 'customer',
+        'created_at': DateTime.now().toIso8601String(),
+      });
+    }
+
+    return response;
   }
 
   @override
@@ -94,16 +108,28 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> updateProfile({String? fullName, String? phone}) async {
-    final user = currentUser;
-    if (user == null) return;
+    final authUser = _client.auth.currentUser;
+    if (authUser == null) return;
     try {
-      final Map<String, dynamic> data = {};
+      // First, try to get existing profile to avoid overwriting role/etc.
+      final existing =
+          await _client.from('users').select().eq('id', authUser.id).maybeSingle();
+
+      final Map<String, dynamic> data = {
+        'id': authUser.id,
+        'email': authUser.email,
+      };
+
+      if (existing == null) {
+        // New profile record
+        data['role'] = 'customer';
+        data['created_at'] = DateTime.now().toIso8601String();
+      }
+
       if (fullName != null) data['full_name'] = fullName;
       if (phone != null) data['phone'] = phone;
 
-      if (data.isNotEmpty) {
-        await _client.from('users').update(data).eq('id', user.id);
-      }
+      await _client.from('users').upsert(data);
     } catch (e) {
       debugPrint('Update profile error: $e');
       rethrow;

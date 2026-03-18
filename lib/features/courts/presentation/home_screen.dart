@@ -60,12 +60,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _onTabChanged(AppNavTab tab) {
+    if (_currentTab == tab) return;
     setState(() => _currentTab = tab);
     switch (tab) {
       case AppNavTab.history:
-        Navigator.pushNamed(context, AppRoutes.bookingHistory);
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.bookingHistory,
+          (route) => false,
+        );
         break;
-      default:
+      case AppNavTab.account:
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.profile,
+          (route) => false,
+        );
+        break;
+      case AppNavTab.home:
+      case AppNavTab.booking:
+        // Already here
         break;
     }
   }

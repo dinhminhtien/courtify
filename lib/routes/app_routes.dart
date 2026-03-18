@@ -7,6 +7,7 @@ import '../features/courts/presentation/home_screen.dart';
 import '../features/owner/presentation/owner_dashboard_screen.dart';
 import '../features/payment/presentation/payment_screen.dart';
 import '../features/auth/presentation/sign_up_login_screen.dart';
+import '../features/auth/presentation/profile_screen.dart';
 
 class AppRoutes {
   static const String initial = '/';
@@ -16,6 +17,7 @@ class AppRoutes {
   static const String bookingHistory = '/booking-history-screen';
   static const String payment = '/payment-screen';
   static const String ownerDashboard = '/owner-dashboard-screen';
+  static const String profile = '/profile-screen';
 
   static Map<String, WidgetBuilder> routes = {
     initial: (context) => RouteGuard(
@@ -53,6 +55,10 @@ class AppRoutes {
     ownerDashboard: (context) => RouteGuard(
       routeName: ownerDashboard,
       child: const OwnerDashboardScreen(),
+    ),
+    profile: (context) => RouteGuard(
+      routeName: profile,
+      child: const ProfileScreen(),
     ),
   };
 

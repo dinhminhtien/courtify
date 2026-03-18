@@ -34,12 +34,15 @@ class SocialLoginWidget extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 10),
-            Text(
-              'Đăng nhập bằng Google',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: const Color(0xFF374151),
+            Flexible(
+              child: Text(
+                'Đăng nhập bằng Google',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF374151),
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

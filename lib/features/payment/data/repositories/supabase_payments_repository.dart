@@ -87,7 +87,6 @@ class SupabasePaymentsRepository implements PaymentsRepository {
         'amount': totalAmount,
         'transaction_id': 'CASH-${DateTime.now().millisecondsSinceEpoch}',
         'status': 'PENDING_CASH',
-        'payment_method': 'cash',
       }).select().single();
 
       // Confirm bookings immediately for cash payment
