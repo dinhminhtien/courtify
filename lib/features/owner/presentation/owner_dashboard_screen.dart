@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../payment/presentation/providers/payment_provider.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
+import '../../../routes/app_routes.dart';
 import '../../../shared/widgets/app_navigation.dart';
 import './widgets/owner_kpi_grid_widget.dart';
 import './widgets/owner_quick_stats_widget.dart';
@@ -78,6 +79,52 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
 
   void _onTabChanged(OwnerNavTab tab) {
     setState(() => _currentTab = tab);
+  }
+
+  Future<void> _confirmLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Đăng xuất',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Bạn có chắc muốn đăng xuất không?',
+          style: GoogleFonts.plusJakartaSans(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Hủy',
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.muted),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Đăng xuất',
+              style: GoogleFonts.plusJakartaSans(
+                color: AppTheme.error,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      await ref.read(authProvider.notifier).signOut();
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.signUpLogin,
+          (route) => false,
+        );
+      }
+    }
   }
 
   @override
@@ -283,11 +330,20 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
       titleSpacing: 20,
       actions: [
         IconButton(
+          onPressed: () {},
           icon: const Icon(
             Icons.notifications_none_rounded,
             color: AppTheme.primary,
           ),
-          onPressed: () {},
+        ),
+        IconButton(
+          tooltip: 'Đăng xuất',
+          icon: const Icon(
+            Icons.logout_rounded,
+            color: AppTheme.primary,
+            size: 22,
+          ),
+          onPressed: _confirmLogout,
         ),
         Padding(
           padding: const EdgeInsets.only(right: 12),

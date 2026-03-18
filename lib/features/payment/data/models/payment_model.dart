@@ -12,14 +12,14 @@ class PaymentModel extends PaymentEntity {
   });
 
   factory PaymentModel.fromJson(Map<String, dynamic> json) => PaymentModel(
-    id: json['id'] as String,
-    bookingId: json['booking_id'] as String,
-    amount: json['amount'] as int,
-    paymentMethod: json['payment_method'] as String,
+    id: json['id'] as String? ?? '',
+    bookingId: json['booking_id'] as String? ?? '',
+    amount: json['amount'] as int? ?? 0,
+    paymentMethod: json['payment_method'] as String? ?? 'cash',
     status: json['status'] as String? ?? 'PENDING',
     transactionId: json['transaction_id'] as String?,
     createdAt: json['created_at'] != null
-        ? DateTime.parse(json['created_at'] as String)
+        ? DateTime.tryParse(json['created_at'] as String)
         : null,
   );
 

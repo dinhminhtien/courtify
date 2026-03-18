@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../../routes/app_routes.dart';
 
-class HomeAppBarWidget extends StatelessWidget {
+class HomeAppBarWidget extends ConsumerWidget {
   final String userName;
   final int availableCount;
 
@@ -12,8 +15,54 @@ class HomeAppBarWidget extends StatelessWidget {
     required this.availableCount,
   });
 
+  Future<void> _confirmLogout(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Đăng xuất',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+        ),
+        content: Text(
+          'Bạn có chắc muốn đăng xuất không?',
+          style: GoogleFonts.plusJakartaSans(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Hủy',
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.muted),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              'Đăng xuất',
+              style: GoogleFonts.plusJakartaSans(
+                color: AppTheme.error,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && context.mounted) {
+      await ref.read(authProvider.notifier).signOut();
+      if (context.mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.signUpLogin,
+          (route) => false,
+        );
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final now = DateTime.now();
     String greeting;
     if (now.hour < 12) {
@@ -23,6 +72,8 @@ class HomeAppBarWidget extends StatelessWidget {
     } else {
       greeting = 'Chào buổi tối';
     }
+
+    final initial = userName.isNotEmpty ? userName[0].toUpperCase() : 'U';
 
     return SliverAppBar(
       backgroundColor: Colors.white,
@@ -68,7 +119,7 @@ class HomeAppBarWidget extends StatelessWidget {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: AppTheme.primaryContainer,
                       shape: BoxShape.circle,
                     ),
@@ -82,18 +133,18 @@ class HomeAppBarWidget extends StatelessWidget {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
                         colors: [AppTheme.primaryLight, AppTheme.primary],
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
                       shape: BoxShape.circle,
                     ),
-                    child: const Center(
+                    child: Center(
                       child: Text(
-                        'N',
-                        style: TextStyle(
+                        initial,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -116,6 +167,17 @@ class HomeAppBarWidget extends StatelessWidget {
         ),
       ),
       titleSpacing: 20,
+      actions: [
+        IconButton(
+          tooltip: 'Đăng xuất',
+          icon: const Icon(
+            Icons.logout_rounded,
+            color: AppTheme.primary,
+            size: 22,
+          ),
+          onPressed: () => _confirmLogout(context, ref),
+        ),
+      ],
     );
   }
 }

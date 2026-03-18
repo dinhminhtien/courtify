@@ -1,3 +1,4 @@
+import '../../../auth/domain/entities/user_entity.dart';
 import '../../../courts/domain/entities/court.dart';
 import '../../../courts/domain/entities/court_slot.dart';
 
@@ -15,6 +16,7 @@ class BookingEntity {
   // Joined fields
   final CourtSlotEntity? slot;
   final CourtEntity? court;
+  final UserEntity? user;
 
   const BookingEntity({
     required this.id,
@@ -28,10 +30,15 @@ class BookingEntity {
     this.orderCode,
     this.slot,
     this.court,
+    this.user,
   });
 
   Map<String, dynamic> toDisplayMap() {
     final slotDate = slot?.slotDate ?? DateTime.now();
+    final customerName = user?.fullName ?? user?.email ?? 'Khách hàng';
+    final avatarLetter = customerName.isNotEmpty
+        ? customerName[0].toUpperCase()
+        : 'K';
     return {
       'id': id,
       'courtNumber': court?.courtNumber ?? 0,
@@ -40,11 +47,17 @@ class BookingEntity {
           '${slotDate.day.toString().padLeft(2, '0')}/${slotDate.month.toString().padLeft(2, '0')}/${slotDate.year}',
       'date':
           '${slotDate.day.toString().padLeft(2, '0')}/${slotDate.month.toString().padLeft(2, '0')}/${slotDate.year}',
-      'startTime': slot?.startTime != null && slot!.startTime.length >= 5 ? slot!.startTime.substring(0, 5) : (slot?.startTime ?? ''),
-      'endTime': slot?.endTime != null && slot!.endTime.length >= 5 ? slot!.endTime.substring(0, 5) : (slot?.endTime ?? ''),
+      'startTime': slot?.startTime != null && slot!.startTime.length >= 5
+          ? slot!.startTime.substring(0, 5)
+          : (slot?.startTime ?? ''),
+      'endTime': slot?.endTime != null && slot!.endTime.length >= 5
+          ? slot!.endTime.substring(0, 5)
+          : (slot?.endTime ?? ''),
       'price': slot?.price ?? 0,
       'status': status,
       'paymentStatus': paymentStatus,
+      'customerName': customerName,
+      'avatarLetter': avatarLetter,
       'isUpcoming': holdExpiresAt != null
           ? holdExpiresAt!.isAfter(DateTime.now())
           : (status == 'PENDING' || status == 'CONFIRMED'),

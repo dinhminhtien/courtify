@@ -13,15 +13,17 @@ class CourtSlotModel extends CourtSlotEntity {
   });
 
   factory CourtSlotModel.fromJson(Map<String, dynamic> json) => CourtSlotModel(
-    id: json['id'] as String,
-    courtId: json['court_id'] as String,
-    slotDate: DateTime.parse(json['slot_date'] as String),
-    startTime: json['start_time'] as String,
-    endTime: json['end_time'] as String,
-    price: json['price'] as int,
+    id: json['id'] as String? ?? '',
+    courtId: json['court_id'] as String? ?? '',
+    slotDate: json['slot_date'] != null
+        ? (DateTime.tryParse(json['slot_date'] as String) ?? DateTime.now())
+        : DateTime.now(),
+    startTime: json['start_time'] as String? ?? '',
+    endTime: json['end_time'] as String? ?? '',
+    price: json['price'] as int? ?? 0,
     status: json['status'] as String? ?? 'AVAILABLE',
     createdAt: json['created_at'] != null
-        ? DateTime.parse(json['created_at'] as String)
+        ? DateTime.tryParse(json['created_at'] as String)
         : null,
   );
 
