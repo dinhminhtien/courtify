@@ -16,4 +16,10 @@ class UserEntity {
   });
 
   bool get isOwner => role == 'owner';
+
+  bool get isProfileComplete =>
+      fullName != null &&
+      fullName!.isNotEmpty &&
+      phone != null &&
+      phone!.isNotEmpty;
 }

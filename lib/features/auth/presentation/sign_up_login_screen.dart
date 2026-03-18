@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as supabase;
 
 import '../../../core/theme/app_theme.dart';
 import '../../../routes/app_routes.dart';
@@ -35,6 +37,8 @@ class _SignUpLoginScreenState extends ConsumerState<SignUpLoginScreen>
   static const String _ownerEmail = 'owner@courtify.vn';
   static const String _ownerPassword = 'Owner@2026';
 
+  StreamSubscription<supabase.AuthState>? _authSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +53,30 @@ class _SignUpLoginScreenState extends ConsumerState<SignUpLoginScreen>
         ).animate(
           CurvedAnimation(parent: _bgController, curve: Curves.easeOutCubic),
         );
+
+    // Listen for OAuth callback (page reload after Google redirect)
+    _authSubscription = supabase.Supabase.instance.client.auth.onAuthStateChange.listen(
+      (data) async {
+        if (data.event == supabase.AuthChangeEvent.signedIn && data.session != null) {
+          await ref.read(authProvider.notifier).refreshProfile();
+          if (!mounted) return;
+          final user = ref.read(currentUserProvider);
+          if (user?.isOwner == true) {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.ownerDashboard,
+              (route) => false,
+            );
+          } else {
+            Navigator.pushNamedAndRemoveUntil(
+              context,
+              AppRoutes.home,
+              (route) => false,
+            );
+          }
+        }
+      },
+    );
 
     // Check if already logged in
     WidgetsBinding.instance.addPostFrameCallback(
@@ -80,6 +108,7 @@ class _SignUpLoginScreenState extends ConsumerState<SignUpLoginScreen>
 
   @override
   void dispose() {
+    _authSubscription?.cancel();
     _bgController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
