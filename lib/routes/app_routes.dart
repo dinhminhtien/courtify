@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/guards/route_guard.dart';
 import '../features/booking/presentation/booking_confirmation_screen.dart';
 import '../features/booking/presentation/booking_history_screen.dart';
 import '../features/courts/presentation/home_screen.dart';
@@ -17,21 +18,42 @@ class AppRoutes {
   static const String ownerDashboard = '/owner-dashboard-screen';
 
   static Map<String, WidgetBuilder> routes = {
-    initial: (context) => const SignUpLoginScreen(),
-    signUpLogin: (context) => const SignUpLoginScreen(),
-    home: (context) => const HomeScreen(),
+    initial: (context) => RouteGuard(
+      routeName: initial,
+      child: const SignUpLoginScreen(),
+    ),
+    signUpLogin: (context) => RouteGuard(
+      routeName: signUpLogin,
+      child: const SignUpLoginScreen(),
+    ),
+    home: (context) => RouteGuard(
+      routeName: home,
+      child: const HomeScreen(),
+    ),
     bookingConfirmation: (context) {
       final args =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      return BookingConfirmationScreen(bookingArgs: args);
+      return RouteGuard(
+        routeName: bookingConfirmation,
+        child: BookingConfirmationScreen(bookingArgs: args),
+      );
     },
-    bookingHistory: (context) => const BookingHistoryScreen(),
+    bookingHistory: (context) => RouteGuard(
+      routeName: bookingHistory,
+      child: const BookingHistoryScreen(),
+    ),
     payment: (context) {
       final args =
           ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      return PaymentScreen(paymentArgs: args);
+      return RouteGuard(
+        routeName: payment,
+        child: PaymentScreen(paymentArgs: args),
+      );
     },
-    ownerDashboard: (context) => const OwnerDashboardScreen(),
+    ownerDashboard: (context) => RouteGuard(
+      routeName: ownerDashboard,
+      child: const OwnerDashboardScreen(),
+    ),
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
