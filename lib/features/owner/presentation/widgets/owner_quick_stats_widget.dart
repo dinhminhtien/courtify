@@ -12,7 +12,7 @@ class OwnerQuickStatsWidget extends StatelessWidget {
     final totalBookings = bookings.length;
     final totalRevenue = bookings
         .where((b) => b['paymentStatus'] == 'PAID')
-        .fold<int>(0, (sum, b) => sum + (b['price'] as int));
+        .fold<int>(0, (sum, b) => sum + ((b['price'] as int?) ?? 0));
     final pendingCount = bookings.where((b) => b['status'] == 'PENDING').length;
 
     return Container(

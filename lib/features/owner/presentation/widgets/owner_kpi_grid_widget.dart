@@ -18,7 +18,7 @@ class OwnerKpiGridWidget extends StatelessWidget {
         .toList();
     final todayRevenue = paidBookings.fold<int>(
       0,
-      (sum, b) => sum + (b['price'] as int),
+      (sum, b) => sum + ((b['price'] as int?) ?? 0),
     );
     final utilizationPct =
         ((confirmedCount +

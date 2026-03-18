@@ -1,3 +1,4 @@
+import '../../../auth/data/models/user_model.dart';
 import '../../../courts/data/models/court_model.dart';
 import '../../../courts/data/models/court_slot_model.dart';
 import '../../domain/entities/booking.dart';
@@ -15,20 +16,21 @@ class BookingModel extends BookingEntity {
     super.orderCode,
     super.slot,
     super.court,
+    super.user,
   });
 
   factory BookingModel.fromJson(Map<String, dynamic> json) => BookingModel(
-    id: json['id'] as String,
-    userId: json['user_id'] as String,
-    courtId: json['court_id'] as String,
-    slotId: json['slot_id'] as String,
+    id: json['id'] as String? ?? '',
+    userId: json['user_id'] as String? ?? '',
+    courtId: json['court_id'] as String? ?? '',
+    slotId: json['slot_id'] as String? ?? '',
     status: json['status'] as String? ?? 'PENDING',
     paymentStatus: json['payment_status'] as String? ?? 'UNPAID',
     holdExpiresAt: json['hold_expires_at'] != null
-        ? DateTime.parse(json['hold_expires_at'] as String)
+        ? DateTime.tryParse(json['hold_expires_at'] as String)
         : null,
     createdAt: json['created_at'] != null
-        ? DateTime.parse(json['created_at'] as String)
+        ? DateTime.tryParse(json['created_at'] as String)
         : null,
     orderCode: json['order_code'] as int?,
     slot: json['court_slots'] != null
@@ -36,6 +38,9 @@ class BookingModel extends BookingEntity {
         : null,
     court: json['courts'] != null
         ? CourtModel.fromJson(json['courts'] as Map<String, dynamic>)
+        : null,
+    user: json['users'] != null
+        ? UserModel.fromJson(json['users'] as Map<String, dynamic>)
         : null,
   );
 

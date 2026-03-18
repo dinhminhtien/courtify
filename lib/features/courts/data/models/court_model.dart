@@ -4,10 +4,10 @@ class CourtModel extends CourtEntity {
   const CourtModel({required super.id, required super.courtNumber, super.createdAt});
 
   factory CourtModel.fromJson(Map<String, dynamic> json) => CourtModel(
-    id: json['id'] as String,
-    courtNumber: json['court_number'] as int,
+    id: json['id'] as String? ?? '',
+    courtNumber: json['court_number'] as int? ?? 0,
     createdAt: json['created_at'] != null
-        ? DateTime.parse(json['created_at'] as String)
+        ? DateTime.tryParse(json['created_at'] as String)
         : null,
   );
 
