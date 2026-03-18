@@ -27,7 +27,6 @@ class PaymentModel extends PaymentEntity {
     'id': id,
     'booking_id': bookingId,
     'amount': amount,
-    'payment_method': paymentMethod,
     'status': status,
     'transaction_id': transactionId,
   };

@@ -125,13 +125,27 @@ class _BookingHistoryScreenState extends ConsumerState<BookingHistoryScreen>
   }
 
   void _onTabChanged(AppNavTab tab) {
+    if (_currentTab == tab) return;
     setState(() => _currentTab = tab);
-    if (tab == AppNavTab.home) {
-      Navigator.pushNamedAndRemoveUntil(
-        context,
-        AppRoutes.home,
-        (route) => false,
-      );
+    switch (tab) {
+      case AppNavTab.home:
+      case AppNavTab.booking:
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.home,
+          (route) => false,
+        );
+        break;
+      case AppNavTab.account:
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.profile,
+          (route) => false,
+        );
+        break;
+      case AppNavTab.history:
+        // Already here
+        break;
     }
   }
 
