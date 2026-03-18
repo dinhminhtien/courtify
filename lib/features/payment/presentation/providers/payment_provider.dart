@@ -1,7 +1,16 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/config/supabase_config.dart';
+import '../../domain/repositories/payments_repository.dart';
+import '../../data/repositories/supabase_payments_repository.dart';
+import '../../../booking/domain/repositories/bookings_repository.dart';
+import '../../../booking/presentation/providers/bookings_provider.dart';
+
+// ─── Repository Provider ──────────────────────────────────────────────────────
+
+final paymentsRepositoryProvider = Provider<PaymentsRepository>((ref) {
+  return SupabasePaymentsRepository();
+});
 
 // ─── Payment State ────────────────────────────────────────────────────────────
 
@@ -41,10 +50,11 @@ class PaymentState {
 // ─── Payment Notifier ─────────────────────────────────────────────────────────
 
 class PaymentNotifier extends Notifier<PaymentState> {
-  final PaymentsService _paymentsService = PaymentsService();
+  late final PaymentsRepository _paymentsRepository;
 
   @override
   PaymentState build() {
+    _paymentsRepository = ref.watch(paymentsRepositoryProvider);
     return const PaymentState();
   }
 
@@ -54,7 +64,7 @@ class PaymentNotifier extends Notifier<PaymentState> {
   }) async {
     state = state.copyWith(isProcessing: true, clearError: true);
     try {
-      await _paymentsService.createPayment(
+      await _paymentsRepository.createPayment(
         bookingId: bookingId,
         amount: amount,
       );
@@ -70,7 +80,7 @@ class PaymentNotifier extends Notifier<PaymentState> {
   }) async {
     try {
       final transactionId = 'TXN-${DateTime.now().millisecondsSinceEpoch}';
-      await _paymentsService.confirmPayment(
+      await _paymentsRepository.confirmPayment(
         bookingId: bookingId,
         transactionId: transactionId,
         slotIds: slotIds,
@@ -92,7 +102,7 @@ class PaymentNotifier extends Notifier<PaymentState> {
   }) async {
     state = state.copyWith(isProcessing: true, clearError: true);
     try {
-      await _paymentsService.createCashPayment(
+      await _paymentsRepository.createCashPayment(
         bookingId: bookingId,
         slotIds: slotIds,
       );
@@ -146,10 +156,11 @@ class OwnerDashboardState {
 // ─── Owner Dashboard Notifier ─────────────────────────────────────────────────
 
 class OwnerDashboardNotifier extends Notifier<OwnerDashboardState> {
-  final BookingsService _bookingsService = BookingsService();
+  late final BookingsRepository _bookingsRepository;
 
   @override
   OwnerDashboardState build() {
+    _bookingsRepository = ref.watch(bookingsRepositoryProvider);
     // Use Future.microtask to avoid triggering async state mutation during build
     Future.microtask(() => loadDashboardData());
     return const OwnerDashboardState();
@@ -158,7 +169,7 @@ class OwnerDashboardNotifier extends Notifier<OwnerDashboardState> {
   Future<void> loadDashboardData() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final bookings = await _bookingsService.getAllBookings();
+      final bookings = await _bookingsRepository.getAllBookings();
       state = state.copyWith(
         bookings: bookings.map((b) => b.toDisplayMap()).toList(),
         isLoading: false,
@@ -170,12 +181,12 @@ class OwnerDashboardNotifier extends Notifier<OwnerDashboardState> {
   }
 
   Future<void> confirmBooking(String bookingId) async {
-    await _bookingsService.confirmBooking(bookingId);
+    await _bookingsRepository.confirmBooking(bookingId);
     await loadDashboardData();
   }
 
   Future<void> completeBooking(String bookingId) async {
-    await _bookingsService.completeBooking(bookingId);
+    await _bookingsRepository.completeBooking(bookingId);
     await loadDashboardData();
   }
 }
