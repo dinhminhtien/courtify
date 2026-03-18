@@ -23,4 +23,6 @@ abstract class AuthRepository {
   Future<void> signOut();
 
   Future<UserEntity?> getCurrentUserProfile();
+
+  Future<void> updateProfile({String? fullName, String? phone});
 }

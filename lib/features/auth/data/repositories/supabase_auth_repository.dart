@@ -46,23 +46,20 @@ class SupabaseAuthRepository implements AuthRepository {
   Future<bool> signInWithGoogle() async {
     try {
       if (kIsWeb) {
+        // Use the current page origin as redirect so it works in both
+        // local dev (http://127.0.0.1:5000) and production.
+        final redirectTo = Uri.base.origin;
         await _client.auth.signInWithOAuth(
           OAuthProvider.google,
-          redirectTo: 'https://courtify-fbpxu80.public.builtwithrocket.new',
+          redirectTo: redirectTo,
         );
+        // signInWithOAuth on web redirects the browser; return value is
+        // irrelevant — the session is picked up when the page reloads.
         return true;
       } else {
-        // Native Google Sign-In
-        const webClientId = String.fromEnvironment(
-          'GOOGLE_WEB_CLIENT_ID',
-          defaultValue: '',
-        );
-        if (webClientId.isEmpty) return false;
-
-        // For native, use signInWithOAuth with deep link
         await _client.auth.signInWithOAuth(
           OAuthProvider.google,
-          redirectTo: 'io.supabase.courtify://login-callback',
+          redirectTo: 'https://kkbregpvyitljqjcjesa.supabase.co/auth/v1/callback',
         );
         return true;
       }
@@ -92,6 +89,24 @@ class SupabaseAuthRepository implements AuthRepository {
     } catch (e) {
       debugPrint('Get user profile error: $e');
       return null;
+    }
+  }
+
+  @override
+  Future<void> updateProfile({String? fullName, String? phone}) async {
+    final user = currentUser;
+    if (user == null) return;
+    try {
+      final Map<String, dynamic> data = {};
+      if (fullName != null) data['full_name'] = fullName;
+      if (phone != null) data['phone'] = phone;
+
+      if (data.isNotEmpty) {
+        await _client.from('users').update(data).eq('id', user.id);
+      }
+    } catch (e) {
+      debugPrint('Update profile error: $e');
+      rethrow;
     }
   }
 }

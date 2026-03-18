@@ -11,6 +11,7 @@ import './widgets/date_strip_widget.dart';
 import './widgets/home_app_bar_widget.dart';
 import './widgets/slot_grid_widget.dart';
 import './widgets/slot_legend_widget.dart';
+import '../../auth/presentation/widgets/update_profile_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -22,11 +23,26 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   AppNavTab _currentTab = AppNavTab.home;
 
-  void _onConfirmSlots(List<Map<String, dynamic>> slots) {
+  void _onConfirmSlots(List<Map<String, dynamic>> slots) async {
     if (slots.isEmpty) return;
+    final currentUser = ref.read(currentUserProvider);
+
+    // Check if profile is complete before allowed to book
+    if (currentUser?.isProfileComplete != true) {
+      final updated = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const UpdateProfileDialog(),
+      );
+
+      if (updated != true) return;
+    }
+
     final courtsState = ref.read(courtsProvider);
     if (courtsState.courts.isEmpty) return;
     final court = courtsState.courts[courtsState.selectedCourtIndex];
+
+    if (!mounted) return;
 
     Navigator.pushNamed(
       context,

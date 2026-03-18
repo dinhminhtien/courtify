@@ -138,6 +138,19 @@ class AuthNotifier extends Notifier<AuthState> {
   }
 
   bool get isLoggedIn => _authRepository.isLoggedIn;
+
+  Future<bool> updateProfile({String? fullName, String? phone}) async {
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _authRepository.updateProfile(fullName: fullName, phone: phone);
+      final profile = await _authRepository.getCurrentUserProfile();
+      state = state.copyWith(user: profile, isLoading: false);
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
+    }
+  }
 }
 
 // ─── Providers ────────────────────────────────────────────────────────────────
