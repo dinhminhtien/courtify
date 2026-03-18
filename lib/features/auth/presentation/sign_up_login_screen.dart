@@ -352,8 +352,9 @@ class _SignUpLoginScreenState extends ConsumerState<SignUpLoginScreen>
           const SizedBox(height: 16),
           SocialLoginWidget(onGooglePressed: _handleGoogleLogin),
           const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text(
                 _isLogin ? 'Chưa có tài khoản? ' : 'Đã có tài khoản? ',
