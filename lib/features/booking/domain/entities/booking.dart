@@ -58,6 +58,7 @@ class BookingEntity {
       'paymentStatus': paymentStatus,
       'customerName': customerName,
       'avatarLetter': avatarLetter,
+      'createdAt': createdAt?.toIso8601String(),
       'isUpcoming': holdExpiresAt != null
           ? holdExpiresAt!.isAfter(DateTime.now())
           : (status == 'PENDING' || status == 'CONFIRMED'),
