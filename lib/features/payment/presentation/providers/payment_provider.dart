@@ -130,23 +130,27 @@ class PaymentNotifier extends Notifier<PaymentState> {
 
 class OwnerDashboardState {
   final List<Map<String, dynamic>> bookings;
+  final List<Map<String, dynamic>> weeklyRevenue;
   final bool isLoading;
   final String? error;
 
   const OwnerDashboardState({
     this.bookings = const [],
+    this.weeklyRevenue = const [],
     this.isLoading = false,
     this.error,
   });
 
   OwnerDashboardState copyWith({
     List<Map<String, dynamic>>? bookings,
+    List<Map<String, dynamic>>? weeklyRevenue,
     bool? isLoading,
     String? error,
     bool clearError = false,
   }) {
     return OwnerDashboardState(
       bookings: bookings ?? this.bookings,
+      weeklyRevenue: weeklyRevenue ?? this.weeklyRevenue,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
     );
@@ -169,9 +173,55 @@ class OwnerDashboardNotifier extends Notifier<OwnerDashboardState> {
   Future<void> loadDashboardData() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final bookings = await _bookingsRepository.getAllBookings();
+      final rawBookings = await _bookingsRepository.getAllBookings();
+      final bookingsMap = rawBookings.map((b) => b.toDisplayMap()).toList();
+      
+      // Calculate weekly revenue
+      final now = DateTime.now();
+      final recentBookings = bookingsMap.where((b) {
+        if (b['createdAt'] == null) return false;
+        final createdAt = DateTime.tryParse(b['createdAt'] as String);
+        if (createdAt == null) return false;
+        // Last 7 days including today
+        return now.difference(createdAt).inDays <= 7;
+      }).toList();
+
+      final List<Map<String, dynamic>> weeklyRevenue = [];
+      const weekdays = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+      
+      for (int i = 6; i >= 0; i--) {
+        final date = now.subtract(Duration(days: i));
+        
+        int dayRevenue = 0;
+        int dayBookingsCount = 0;
+        
+        for (var b in recentBookings) {
+          final createdAt = DateTime.tryParse(b['createdAt'] as String);
+          if (createdAt != null &&
+              createdAt.year == date.year &&
+              createdAt.month == date.month &&
+              createdAt.day == date.day) {
+            
+            dayBookingsCount++;
+            if (b['paymentStatus'] == 'PAID') {
+              dayRevenue += (b['price'] as int?) ?? 0;
+            }
+          }
+        }
+        
+        // get 1-based weekday index (1=Monday, 7=Sunday)
+        final dayName = weekdays[date.weekday - 1];
+        
+        weeklyRevenue.add({
+          'day': dayName,
+          'revenue': dayRevenue,
+          'bookings': dayBookingsCount,
+        });
+      }
+
       state = state.copyWith(
-        bookings: bookings.map((b) => b.toDisplayMap()).toList(),
+        bookings: bookingsMap,
+        weeklyRevenue: weeklyRevenue,
         isLoading: false,
       );
     } catch (e) {

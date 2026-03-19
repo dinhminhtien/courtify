@@ -23,14 +23,18 @@ void main() async {
     if (!hasShownError) {
       hasShownError = true;
 
-      // Reset flag after 3 seconds to allow error widget on new screens
-      Future.delayed(Duration(seconds: 5), () {
+      // Reset flag after 5 seconds to allow error widget on new screens
+      Future.delayed(const Duration(seconds: 5), () {
         hasShownError = false;
       });
 
-      return CustomErrorWidget(errorDetails: details);
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.lightTheme,
+        home: CustomErrorWidget(errorDetails: details),
+      );
     }
-    return SizedBox.shrink();
+    return const SizedBox.shrink();
   };
 
   // 🚨 CRITICAL: Device orientation lock - web does not support this API

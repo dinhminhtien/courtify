@@ -11,6 +11,7 @@ import './widgets/owner_kpi_grid_widget.dart';
 import './widgets/owner_quick_stats_widget.dart';
 import './widgets/owner_recent_bookings_widget.dart';
 import './widgets/owner_revenue_chart_widget.dart';
+import '../../../shared/widgets/custom_error_widget.dart';
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -119,10 +120,9 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
     if (confirmed == true && mounted) {
       await ref.read(authProvider.notifier).signOut();
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.signUpLogin,
-          (route) => false,
-        );
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil(AppRoutes.signUpLogin, (route) => false);
       }
     }
   }
@@ -132,39 +132,98 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
     final isTablet = MediaQuery.of(context).size.width >= 600;
     final dashboardState = ref.watch(ownerDashboardProvider);
 
+    Widget bodyContent;
+
+    if (_currentTab == OwnerNavTab.manage) {
+      bodyContent = _buildPlaceholderBody(
+        'Quản lý sân',
+        Icons.manage_accounts_rounded,
+      );
+    } else if (_currentTab == OwnerNavTab.schedule) {
+      bodyContent = _buildPlaceholderBody(
+        'Lịch đặt sân',
+        Icons.calendar_month_rounded,
+      );
+    } else if (_currentTab == OwnerNavTab.settings) {
+      bodyContent = _buildPlaceholderBody('Cài đặt', Icons.settings_rounded);
+    } else if (dashboardState.error != null) {
+      bodyContent = CustomErrorWidget(errorMessage: dashboardState.error);
+    } else {
+      bodyContent = RefreshIndicator(
+        color: AppTheme.primary,
+        onRefresh: () =>
+            ref.read(ownerDashboardProvider.notifier).loadDashboardData(),
+        child: dashboardState.isLoading && dashboardState.bookings.isEmpty
+            ? const SingleChildScrollView(
+                physics: AlwaysScrollableScrollPhysics(),
+                child: SizedBox(
+                  height: 300,
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppTheme.primary),
+                  ),
+                ),
+              )
+            : dashboardState.error != null
+            ? SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: CustomErrorWidget(errorMessage: dashboardState.error),
+              )
+            : isTablet
+            ? _buildTabletLayout(dashboardState.bookings)
+            : _buildPhoneLayout(dashboardState.bookings),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppTheme.background,
-      body: SafeArea(
-        child: RefreshIndicator(
-          color: AppTheme.primary,
-          onRefresh: () =>
-              ref.read(ownerDashboardProvider.notifier).loadDashboardData(),
-          child: dashboardState.isLoading
-              ? const Center(
-                  child: CircularProgressIndicator(color: AppTheme.primary),
-                )
-              : isTablet
-              ? _buildTabletLayout(dashboardState.bookings)
-              : _buildPhoneLayout(dashboardState.bookings),
-        ),
-      ),
+      body: SafeArea(child: bodyContent),
       bottomNavigationBar: OwnerBottomNav(
         currentTab: _currentTab,
         onTabChanged: _onTabChanged,
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {},
-        backgroundColor: AppTheme.primary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.lock_outline_rounded, size: 20),
-        label: Text(
-          'Khóa Slot',
-          style: GoogleFonts.plusJakartaSans(
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+      floatingActionButton: _currentTab == OwnerNavTab.dashboard
+          ? FloatingActionButton.extended(
+              onPressed: () {},
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              icon: const Icon(Icons.lock_outline_rounded, size: 20),
+              label: Text(
+                'Khóa Slot',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              elevation: 2,
+            )
+          : null,
+    );
+  }
+
+  Widget _buildPlaceholderBody(String title, IconData icon) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 64, color: AppTheme.primary.withAlpha(100)),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primary,
+            ),
           ),
-        ),
-        elevation: 2,
+          const SizedBox(height: 8),
+          Text(
+            'Tính năng đang phát triển',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 14,
+              color: AppTheme.muted,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -305,7 +364,6 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                         Text(
                           dateStr,
                           style: GoogleFonts.plusJakartaSans(
-                            fontSize: 12,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.primary,
                           ),
