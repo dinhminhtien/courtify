@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../providers/payment_provider.dart';
 
-class PayOSPaymentWidget extends StatelessWidget {
+class PayOSPaymentWidget extends ConsumerWidget {
   final int amount;
   final String bookingId;
   final bool isProcessing;
@@ -29,7 +33,9 @@ class PayOSPaymentWidget extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final paymentState = ref.watch(paymentProvider);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -75,7 +81,7 @@ class PayOSPaymentWidget extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
+                   const Icon(
                     Icons.qr_code_rounded,
                     size: 80,
                     color: Color(0xFFBDBDBD),
@@ -114,9 +120,9 @@ class PayOSPaymentWidget extends StatelessWidget {
               height: 50,
               child: ElevatedButton.icon(
                 onPressed: onInitiatePayment,
-                icon: const Icon(Icons.open_in_new_rounded, size: 18),
+                icon: const Icon(Icons.flash_on_rounded, size: 18),
                 label: Text(
-                  'Mở ứng dụng ngân hàng',
+                  'Bắt đầu thanh toán',
                   style: GoogleFonts.plusJakartaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
@@ -145,46 +151,32 @@ class PayOSPaymentWidget extends StatelessWidget {
             ),
             const SizedBox(height: 16),
           ] else ...[
-            Container(
-              width: 160,
-              height: 160,
-              decoration: BoxDecoration(
-                color: AppTheme.background,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.primary.withAlpha(102)),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  const Icon(
-                    Icons.qr_code_rounded,
-                    size: 100,
+            // Real QR Code display
+            if (paymentState.qrCode != null)
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppTheme.primary.withAlpha(50)),
+                ),
+                child: QrImageView(
+                  data: paymentState.qrCode!,
+                  version: QrVersions.auto,
+                  size: 200.0,
+                  eyeStyle: const QrEyeStyle(
+                    eyeShape: QrEyeShape.square,
                     color: AppTheme.primary,
                   ),
-                  Positioned(
-                    bottom: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primary,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        _formatVnd(amount),
-                        style: GoogleFonts.plusJakartaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white,
-                        ),
-                      ),
-                    ),
+                  dataModuleStyle: const QrDataModuleStyle(
+                    dataModuleShape: QrDataModuleShape.square,
+                    color: AppTheme.primary,
                   ),
-                ],
-              ),
-            ),
+                ),
+              )
+            else
+               const CircularProgressIndicator(color: AppTheme.primary),
+            
             const SizedBox(height: 16),
             Text(
               'Quét mã QR bằng ứng dụng ngân hàng',
@@ -194,40 +186,91 @@ class PayOSPaymentWidget extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              'hoặc',
-              style: GoogleFonts.plusJakartaSans(
-                fontSize: 12,
-                color: AppTheme.muted,
-              ),
-            ),
-            const SizedBox(height: 8),
-            SizedBox(
-              width: double.infinity,
-              height: 46,
-              child: OutlinedButton.icon(
-                onPressed: () {},
-                icon: const Icon(Icons.open_in_new_rounded, size: 16),
-                label: Text(
-                  'Mở ứng dụng ngân hàng',
-                  style: GoogleFonts.plusJakartaSans(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
+            const SizedBox(height: 20),
+            
+            // Bank Info Section
+            if (paymentState.accountNumber != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.background,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.primary,
-                  side: const BorderSide(color: AppTheme.primary),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
+                child: Column(
+                  children: [
+                    _InfoRow(label: 'STK:', value: paymentState.accountNumber!),
+                    const Divider(height: 16),
+                    _InfoRow(label: 'Tên:', value: paymentState.accountName!),
+                    const Divider(height: 16),
+                    _InfoRow(label: 'Số tiền:', value: '${_formatVnd(amount)} VND'),
+                  ],
                 ),
               ),
-            ),
+              const SizedBox(height: 20),
+            ],
+
+            if (paymentState.checkoutUrl != null)
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final url = Uri.parse(paymentState.checkoutUrl!);
+                    if (await canLaunchUrl(url)) {
+                      await launchUrl(url, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  icon: const Icon(Icons.open_in_browser_rounded, size: 18),
+                  label: Text(
+                    'Mở trang thanh toán PayOS',
+                    style: GoogleFonts.plusJakartaSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppTheme.primary,
+                    side: const BorderSide(color: AppTheme.primary),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ],
       ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            color: AppTheme.muted,
+          ),
+        ),
+        Text(
+          value,
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+            color: AppTheme.primary,
+          ),
+        ),
+      ],
     );
   }
 }

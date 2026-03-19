@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../core/api/supabase_client.dart';
+import '../../../../core/services/payos_service.dart';
 import '../../domain/entities/payment.dart';
 import '../../domain/repositories/payments_repository.dart';
 import '../models/payment_model.dart';
 
 class SupabasePaymentsRepository implements PaymentsRepository {
   final SupabaseClient _client = SupabaseClientManager.instance.client;
+  final PayOSService _payosService = PayOSService();
 
   @override
   Future<PaymentEntity?> createPayment({
@@ -14,16 +16,91 @@ class SupabasePaymentsRepository implements PaymentsRepository {
     required int amount,
   }) async {
     try {
+      // 1. Check if payment already exists
+      final existing = await getPaymentByBookingId(bookingId);
+      if (existing != null && (existing.checkoutUrl?.isNotEmpty ?? false)) {
+        return existing;
+      }
+
+      // 2. Generate numeric order code (int)
+      // PayOS requires orderCode to be an integer.
+      final orderCode = DateTime.now().millisecondsSinceEpoch % 1000000000;
+
+      // 3. Create PayOS payment link
+      final payosData = await _payosService.createPaymentLink(
+        orderCode: orderCode,
+        amount: amount,
+        description: 'CK$orderCode',
+        returnUrl: 'http://localhost:5000/success', // For local Chrome testing
+        cancelUrl: 'http://localhost:5000/cancel', 
+      );
+
+      // 4. Store in Supabase
       final data = await _client.from('payments').insert({
         'booking_id': bookingId,
         'amount': amount,
-        'status': 'UNPAID',
+        'status': 'PENDING',
+        'payment_method': 'online',
+        'order_code': orderCode,
+        'checkout_url': payosData['checkoutUrl'],
+        'qr_code': payosData['qrCode'],
+        'payment_link_id': payosData['paymentLinkId'],
+        'account_number': payosData['accountNumber'],
+        'account_name': payosData['accountName'],
       }).select().single();
 
       return PaymentModel.fromJson(data);
     } catch (e) {
       debugPrint('Create payment error: $e');
       rethrow;
+    }
+  }
+
+  @override
+  Future<PaymentEntity?> checkPaymentStatus(int orderCode) async {
+    try {
+      final payosStatus = await _payosService.getPaymentStatus(orderCode);
+      final status = payosStatus['status'];
+      debugPrint('PayOS status for $orderCode: $status');
+      
+      String mappedStatus = 'PENDING';
+      if (status == 'PAID') mappedStatus = 'PAID';
+      if (status == 'CANCELLED' || status == 'EXPIRED') mappedStatus = 'FAILED';
+
+      if (mappedStatus == 'PAID') {
+        final currentPayment = await _client.from('payments').select().eq('order_code', orderCode).single();
+        if (currentPayment['status'] == 'PAID') {
+           debugPrint('Payment $orderCode already PAID in database');
+           return PaymentModel.fromJson(currentPayment);
+        } else {
+           final bookingId = currentPayment['booking_id'];
+           final transactionId = payosStatus['transactions']?.isNotEmpty == true 
+                 ? payosStatus['transactions'][0]['reference']
+                 : 'PAYOS-$orderCode';
+           
+           final confirmed = await confirmPayment(bookingId: bookingId, transactionId: transactionId);
+           debugPrint('Confirmed payment $orderCode for booking $bookingId');
+           return confirmed;
+        }
+      } else if (mappedStatus == 'FAILED') {
+        await _client.from('payments').update({'status': 'FAILED'}).eq('order_code', orderCode);
+      }
+
+      final data = await _client.from('payments').select().eq('order_code', orderCode).single();
+      return PaymentModel.fromJson(data);
+    } catch (e) {
+      debugPrint('Check payment status error: $e');
+      return null;
+    }
+  }
+
+  @override
+  Future<void> cancelPayOSPayment(int orderCode) async {
+    try {
+      await _payosService.cancelPaymentLink(orderCode);
+      await _client.from('payments').update({'status': 'CANCELLED'}).eq('order_code', orderCode);
+    } catch (e) {
+      debugPrint('Cancel PayOS payment error: $e');
     }
   }
 
