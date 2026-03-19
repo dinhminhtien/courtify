@@ -103,25 +103,21 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
     _startPolling();
   }
 
+  bool _isChecking = false;
+
   void _startPolling() {
-    int count = 0;
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
-      count++;
-      if (count >= 4) {
-        timer.cancel();
-        if (mounted) _onPaymentConfirmed();
+    _pollingTimer?.cancel();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (timer) async {
+      if (!mounted || _isChecking) return;
+      _isChecking = true;
+      try {
+        await ref.read(paymentProvider.notifier).checkStatus();
+      } finally {
+        _isChecking = false;
       }
     });
   }
 
-  void _onPaymentConfirmed() async {
-    final slotIds = _slots.map((s) => s['id'] as String).toList();
-    await ref
-        .read(paymentProvider.notifier)
-        .confirmPayment(bookingId: _bookingId, slotIds: slotIds);
-    if (!mounted) return;
-    _successController.forward();
-  }
 
   void _handleHoldExpired() {
     _pollingTimer?.cancel();
@@ -211,6 +207,7 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
               _pollingTimer?.cancel();
               Navigator.pop(context);
               try {
+                await ref.read(paymentProvider.notifier).cancelPayment();
                 await ref
                     .read(bookingsProvider.notifier)
                     .cancelBooking(_bookingId);
@@ -250,10 +247,26 @@ class _PaymentScreenState extends ConsumerState<PaymentScreen>
     final isTablet = MediaQuery.of(context).size.width >= 600;
     final paymentState = ref.watch(paymentProvider);
 
-    // Show success screen for cash payments immediately, or after online payment confirmed
-    final showSuccess = _paymentMethod == 'cash'
-        ? paymentState.paymentSuccess
-        : paymentState.paymentSuccess;
+    // Listen for payment success to trigger animations and final confirmation
+    ref.listen(paymentProvider, (previous, next) {
+      if (!(previous?.paymentSuccess ?? false) && next.paymentSuccess) {
+        debugPrint('Success detected in listener! Starting animation...');
+        _pollingTimer?.cancel();
+        _successController.forward();
+      }
+      if (next.error != null && next.error != previous?.error) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(next.error!)),
+        );
+      }
+    });
+
+    final showSuccess = paymentState.paymentSuccess;
+    if (showSuccess && !_successController.isAnimating && _successController.value == 0) {
+       _successController.forward();
+    }
+    
+    debugPrint('PaymentScreen build: showSuccess=$showSuccess, method=$_paymentMethod');
 
     if (showSuccess) {
       return Scaffold(

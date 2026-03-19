@@ -6,6 +6,10 @@ abstract class PaymentsRepository {
     required int amount,
   });
 
+  Future<PaymentEntity?> checkPaymentStatus(int orderCode);
+
+  Future<void> cancelPayOSPayment(int orderCode);
+
   Future<PaymentEntity?> createCashPayment({
     required String bookingId,
     List<String>? slotIds,

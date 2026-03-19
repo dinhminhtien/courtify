@@ -20,6 +20,11 @@ class PaymentState {
   final bool isPolling;
   final String? error;
   final String? transactionId;
+  final String? checkoutUrl;
+  final String? qrCode;
+  final int? orderCode;
+  final String? accountNumber;
+  final String? accountName;
 
   const PaymentState({
     this.isProcessing = false,
@@ -27,6 +32,11 @@ class PaymentState {
     this.isPolling = false,
     this.error,
     this.transactionId,
+    this.checkoutUrl,
+    this.qrCode,
+    this.orderCode,
+    this.accountNumber,
+    this.accountName,
   });
 
   PaymentState copyWith({
@@ -35,6 +45,11 @@ class PaymentState {
     bool? isPolling,
     String? error,
     String? transactionId,
+    String? checkoutUrl,
+    String? qrCode,
+    int? orderCode,
+    String? accountNumber,
+    String? accountName,
     bool clearError = false,
   }) {
     return PaymentState(
@@ -43,6 +58,11 @@ class PaymentState {
       isPolling: isPolling ?? this.isPolling,
       error: clearError ? null : (error ?? this.error),
       transactionId: transactionId ?? this.transactionId,
+      checkoutUrl: checkoutUrl ?? this.checkoutUrl,
+      qrCode: qrCode ?? this.qrCode,
+      orderCode: orderCode ?? this.orderCode,
+      accountNumber: accountNumber ?? this.accountNumber,
+      accountName: accountName ?? this.accountName,
     );
   }
 }
@@ -64,14 +84,67 @@ class PaymentNotifier extends Notifier<PaymentState> {
   }) async {
     state = state.copyWith(isProcessing: true, clearError: true);
     try {
-      await _paymentsRepository.createPayment(
+      final payment = await _paymentsRepository.createPayment(
         bookingId: bookingId,
         amount: amount,
       );
+      
+      if (payment != null) {
+        state = state.copyWith(
+          isProcessing: false,
+          isPolling: true,
+          checkoutUrl: payment.checkoutUrl,
+          qrCode: payment.qrCode,
+          orderCode: payment.orderCode,
+          accountNumber: payment.accountNumber,
+          accountName: payment.accountName,
+        );
+      } else {
+        state = state.copyWith(isProcessing: false, error: 'Failed to create PayOS link');
+      }
     } catch (e) {
       debugPrint('Create payment record error: $e');
+      state = state.copyWith(isProcessing: false, error: e.toString());
     }
-    state = state.copyWith(isProcessing: false, isPolling: true);
+  }
+
+  Future<void> checkStatus() async {
+    final orderCode = state.orderCode;
+    if (orderCode == null || state.paymentSuccess) return;
+
+    try {
+      final payment = await _paymentsRepository.checkPaymentStatus(orderCode);
+      debugPrint('Polling result for $orderCode: ${payment?.status}');
+      
+      if (payment?.status == 'PAID') {
+        debugPrint('MATCH! Setting paymentSuccess to true');
+        state = state.copyWith(
+          isPolling: false,
+          paymentSuccess: true,
+          transactionId: payment?.transactionId,
+          clearError: true,
+        );
+      } else if (payment?.status == 'FAILED' || payment?.status == 'CANCELLED') {
+         state = state.copyWith(
+          isPolling: false,
+          error: 'Thanh toán thất bại hoặc đã bị hủy',
+        );
+      }
+    } catch (e) {
+      debugPrint('Check status error: $e');
+    }
+  }
+
+  Future<void> cancelPayment() async {
+    final orderCode = state.orderCode;
+    if (orderCode == null) return;
+    
+    try {
+      await _paymentsRepository.cancelPayOSPayment(orderCode);
+      state = state.copyWith(isPolling: false);
+    } catch (e) {
+      debugPrint('Cancel payment error: $e');
+    }
   }
 
   Future<void> confirmPayment({
