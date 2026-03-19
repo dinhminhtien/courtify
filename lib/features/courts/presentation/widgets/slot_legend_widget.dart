@@ -7,17 +7,17 @@ class SlotLegendWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: [
-          Text(
-            'Chú thích: ',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 12,
-              color: AppTheme.muted,
-            ),
+    return Row(
+      children: [
+        Text(
+          'Chú thích: ',
+          style: GoogleFonts.plusJakartaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: AppTheme.muted,
           ),
+        ),
+
           _LegendItem(
             color: AppTheme.slotAvailable,
             textColor: AppTheme.slotAvailableText,
@@ -42,8 +42,8 @@ class SlotLegendWidget extends StatelessWidget {
             label: 'Khóa',
           ),
         ],
-      ),
-    );
+      );
+
   }
 }
 
@@ -61,12 +61,13 @@ class _LegendItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: textColor.withAlpha(77)),
+        borderRadius: BorderRadius.circular(100),
+        border: Border.all(color: textColor.withValues(alpha: 0.1)),
       ),
+
       child: Text(
         label,
         style: GoogleFonts.plusJakartaSans(

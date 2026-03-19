@@ -24,13 +24,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _currentTab = tab);
     switch (tab) {
       case AppNavTab.home:
-      case AppNavTab.booking:
         Navigator.pushNamedAndRemoveUntil(
           context,
           AppRoutes.home,
           (route) => false,
         );
         break;
+      case AppNavTab.booking:
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.booking,
+          (route) => false,
+        );
+        break;
+
       case AppNavTab.history:
         Navigator.pushNamedAndRemoveUntil(
           context,

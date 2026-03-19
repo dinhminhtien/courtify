@@ -10,6 +10,8 @@ import '../../domain/usecases/mark_notification_read_usecase.dart';
 import '../../data/datasources/notification_remote_data_source.dart';
 import '../../data/repositories/notification_repository_impl.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../../../auth/domain/entities/user_entity.dart';
+
 
 // ─── Data Source & Repository Providers ─────────────────────────────────────
 
@@ -76,20 +78,20 @@ class NotificationNotifier extends Notifier<NotificationState> {
   RealtimeChannel? _realtimeChannel;
 
   @override
-
   NotificationState build() {
     _getNotificationsUseCase = ref.watch(getNotificationsUseCaseProvider);
     _markNotificationReadUseCase = ref.watch(markNotificationReadUseCaseProvider);
     _markAllNotificationsReadUseCase = ref.watch(markAllNotificationsReadUseCaseProvider);
 
     // Watch user changes
-    ref.listen(currentUserProvider, (previous, next) {
+    ref.listen<UserEntity?>(currentUserProvider, (previous, next) {
       if (next != null) {
         fetchNotifications();
       } else {
         state = const NotificationState();
       }
     });
+
 
     // Load initial data if user is already present
     final user = ref.read(currentUserProvider);
@@ -102,6 +104,7 @@ class NotificationNotifier extends Notifier<NotificationState> {
 
     return const NotificationState();
   }
+
 
   void _setupRealtime(String userId) {
     _realtimeChannel?.unsubscribe();
