@@ -75,6 +75,16 @@ class SupabaseBookingsRepository implements BookingsRepository {
       await _client
           .from('bookings')
           .update({'status': 'CANCELLED'}).eq('id', bookingId);
+
+      // Create Notification
+      final booking = await _client.from('bookings').select('user_id').eq('id', bookingId).single();
+      await _createNotification(
+        userId: booking['user_id'],
+        title: 'Booking đã hủy',
+        content: 'Booking $bookingId của bạn đã được hủy thành công.',
+        type: 'reminder',
+        referenceId: bookingId,
+      );
     } catch (e) {
       debugPrint('Cancel booking error: $e');
       rethrow;
@@ -99,9 +109,41 @@ class SupabaseBookingsRepository implements BookingsRepository {
       await _client
           .from('bookings')
           .update({'status': 'COMPLETED'}).eq('id', bookingId);
+
+      // Create Notification
+      final booking = await _client.from('bookings').select('user_id').eq('id', bookingId).single();
+      await _createNotification(
+        userId: booking['user_id'],
+        title: 'Booking hoàn tất',
+        content: 'Cảm ơn bạn đã sử dụng dịch vụ! Booking $bookingId đã hoàn tất.',
+        type: 'reminder',
+        referenceId: bookingId,
+      );
     } catch (e) {
       debugPrint('Complete booking error: $e');
       rethrow;
     }
   }
+
+  Future<void> _createNotification({
+    required String userId,
+    required String title,
+    required String content,
+    required String type,
+    String? referenceId,
+  }) async {
+    try {
+      await _client.from('notifications').insert({
+        'user_id': userId,
+        'title': title,
+        'content': content,
+        'type': type,
+        'reference_id': referenceId,
+        'is_read': false,
+      });
+    } catch (e) {
+      debugPrint('Error creating notification: $e');
+    }
+  }
 }
+

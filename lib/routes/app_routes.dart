@@ -8,6 +8,8 @@ import '../features/owner/presentation/owner_dashboard_screen.dart';
 import '../features/payment/presentation/payment_screen.dart';
 import '../features/auth/presentation/sign_up_login_screen.dart';
 import '../features/auth/presentation/profile_screen.dart';
+import '../features/notifications/presentation/screens/notifications_screen.dart';
+
 
 class AppRoutes {
   static const String initial = '/';
@@ -18,6 +20,8 @@ class AppRoutes {
   static const String payment = '/payment-screen';
   static const String ownerDashboard = '/owner-dashboard-screen';
   static const String profile = '/profile-screen';
+  static const String notifications = '/notifications-screen';
+
 
   static Map<String, WidgetBuilder> routes = {
     initial: (context) => RouteGuard(
@@ -60,6 +64,11 @@ class AppRoutes {
       routeName: profile,
       child: const ProfileScreen(),
     ),
+    notifications: (context) => RouteGuard(
+      routeName: notifications,
+      child: const NotificationsScreen(),
+    ),
+
   };
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {

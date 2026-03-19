@@ -9,6 +9,8 @@ import '../../../shared/widgets/app_navigation.dart';
 import '../../../shared/widgets/empty_state_widget.dart';
 import './widgets/booking_filter_tabs_widget.dart';
 import './widgets/booking_history_card_widget.dart';
+import '../../notifications/presentation/providers/notification_provider.dart';
+
 
 class BookingHistoryScreen extends ConsumerStatefulWidget {
   const BookingHistoryScreen({super.key});
@@ -172,11 +174,49 @@ class _BookingHistoryScreenState extends ConsumerState<BookingHistoryScreen>
         ),
         actions: [
           IconButton(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(
+                  Icons.notifications_none_rounded,
+                  color: AppTheme.primary,
+                ),
+                if (ref.watch(notificationProvider).unreadCount > 0)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.secondary,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 14,
+                        minHeight: 14,
+                      ),
+                      child: Text(
+                        '${ref.watch(notificationProvider).unreadCount}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh_rounded, color: AppTheme.primary),
             onPressed: _handleRefresh,
             tooltip: 'Làm mới',
           ),
         ],
+
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(48),
           child: BookingFilterTabsWidget(controller: _tabController),

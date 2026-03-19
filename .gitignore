@@ -57,3 +57,6 @@ ios/Flutter/
 
 .env
 
+/migrations
+*.sql
+
