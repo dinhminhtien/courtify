@@ -7,14 +7,10 @@ import '../../../routes/app_routes.dart';
 import './providers/courts_provider.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 import '../../../shared/widgets/app_navigation.dart';
-import './widgets/court_selector_widget.dart';
-import './widgets/date_strip_widget.dart';
 import './widgets/home_app_bar_widget.dart';
-import './widgets/slot_grid_widget.dart';
-import './widgets/slot_legend_widget.dart';
-import '../../auth/presentation/widgets/update_profile_dialog.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
+
   const HomeScreen({super.key});
 
   @override
