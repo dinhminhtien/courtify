@@ -12,6 +12,8 @@ import './widgets/owner_quick_stats_widget.dart';
 import './widgets/owner_recent_bookings_widget.dart';
 import './widgets/owner_revenue_chart_widget.dart';
 import '../../../shared/widgets/custom_error_widget.dart';
+import '../../notifications/presentation/providers/notification_provider.dart';
+
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
   const OwnerDashboardScreen({super.key});
@@ -388,12 +390,43 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
       titleSpacing: 20,
       actions: [
         IconButton(
-          onPressed: () {},
-          icon: const Icon(
-            Icons.notifications_none_rounded,
-            color: AppTheme.primary,
+          onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
+          icon: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              const Icon(
+                Icons.notifications_none_rounded,
+                color: AppTheme.primary,
+              ),
+              if (ref.watch(notificationProvider).unreadCount > 0)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.secondary,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 14,
+                      minHeight: 14,
+                    ),
+                    child: Text(
+                      '${ref.watch(notificationProvider).unreadCount}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 8,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
+
         IconButton(
           tooltip: 'Đăng xuất',
           icon: const Icon(

@@ -7,6 +7,8 @@ import '../../../routes/app_routes.dart';
 import '../../../shared/widgets/app_navigation.dart';
 import './providers/auth_provider.dart';
 import './widgets/update_profile_dialog.dart';
+import '../../notifications/presentation/providers/notification_provider.dart';
+
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -22,13 +24,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() => _currentTab = tab);
     switch (tab) {
       case AppNavTab.home:
-      case AppNavTab.booking:
         Navigator.pushNamedAndRemoveUntil(
           context,
           AppRoutes.home,
           (route) => false,
         );
         break;
+      case AppNavTab.booking:
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          AppRoutes.booking,
+          (route) => false,
+        );
+        break;
+
       case AppNavTab.history:
         Navigator.pushNamedAndRemoveUntil(
           context,
@@ -117,11 +126,49 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         ),
         actions: [
           IconButton(
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.notifications),
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(
+                  Icons.notifications_none_rounded,
+                  color: AppTheme.primary,
+                ),
+                if (ref.watch(notificationProvider).unreadCount > 0)
+                  Positioned(
+                    top: -4,
+                    right: -4,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: AppTheme.secondary,
+                        shape: BoxShape.circle,
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 14,
+                        minHeight: 14,
+                      ),
+                      child: Text(
+                        '${ref.watch(notificationProvider).unreadCount}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.logout_rounded, color: AppTheme.error),
             onPressed: _confirmLogout,
             tooltip: 'Đăng xuất',
           ),
         ],
+
       ),
       body: SafeArea(
         child: SingleChildScrollView(

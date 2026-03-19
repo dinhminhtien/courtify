@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
 import '../../../../routes/app_routes.dart';
+import '../../../notifications/presentation/providers/notification_provider.dart';
+
 
 class HomeAppBarWidget extends ConsumerWidget {
   final String userName;
@@ -116,19 +118,55 @@ class HomeAppBarWidget extends ConsumerWidget {
                       ],
                     ),
                   ),
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primaryContainer,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.notifications_none_rounded,
-                      color: AppTheme.primary,
-                      size: 22,
+                  GestureDetector(
+                    onTap: () => Navigator.pushNamed(context, AppRoutes.notifications),
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: const BoxDecoration(
+                            color: AppTheme.primaryContainer,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.notifications_none_rounded,
+                            color: AppTheme.primary,
+                            size: 22,
+                          ),
+                        ),
+                        if (ref.watch(notificationProvider).unreadCount > 0)
+                          Positioned(
+                            top: -2,
+                            right: -2,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: AppTheme.secondary,
+                                shape: BoxShape.circle,
+                              ),
+                              constraints: const BoxConstraints(
+                                minWidth: 16,
+                                minHeight: 16,
+                              ),
+                              child: Text(
+                                '${ref.watch(notificationProvider).unreadCount}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                                overflow: TextOverflow.clip,
+                                maxLines: 1,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+
                   const SizedBox(width: 8),
                   Container(
                     width: 40,

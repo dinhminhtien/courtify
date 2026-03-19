@@ -27,32 +27,33 @@ class StatusBadgeWidget extends StatelessWidget {
       case BookingStatus.pending:
         return StatusBadgeWidget(
           label: 'Chờ xác nhận',
-          backgroundColor: AppTheme.secondaryContainer,
+          backgroundColor: AppTheme.warning.withValues(alpha: 0.12),
           textColor: AppTheme.warning,
           icon: Icons.hourglass_empty_rounded,
         );
       case BookingStatus.confirmed:
         return StatusBadgeWidget(
           label: 'Đã xác nhận',
-          backgroundColor: AppTheme.primaryContainer,
+          backgroundColor: AppTheme.success.withValues(alpha: 0.12),
           textColor: AppTheme.success,
           icon: Icons.check_circle_outline_rounded,
         );
       case BookingStatus.cancelled:
         return StatusBadgeWidget(
           label: 'Đã hủy',
-          backgroundColor: const Color(0xFFFFEBEE),
+          backgroundColor: AppTheme.error.withValues(alpha: 0.12),
           textColor: AppTheme.error,
           icon: Icons.cancel_outlined,
         );
       case BookingStatus.completed:
         return StatusBadgeWidget(
           label: 'Hoàn tất',
-          backgroundColor: const Color(0xFFE3F2FD),
+          backgroundColor: AppTheme.info.withValues(alpha: 0.12),
           textColor: AppTheme.info,
           icon: Icons.task_alt_rounded,
         );
     }
+
   }
 
   factory StatusBadgeWidget.payment(PaymentStatus status) {
@@ -60,18 +61,19 @@ class StatusBadgeWidget extends StatelessWidget {
       case PaymentStatus.unpaid:
         return StatusBadgeWidget(
           label: 'Chưa thanh toán',
-          backgroundColor: AppTheme.secondaryContainer,
+          backgroundColor: AppTheme.warning.withValues(alpha: 0.12),
           textColor: AppTheme.warning,
           icon: Icons.payment_outlined,
         );
       case PaymentStatus.paid:
         return StatusBadgeWidget(
           label: 'Đã thanh toán',
-          backgroundColor: AppTheme.primaryContainer,
+          backgroundColor: AppTheme.success.withValues(alpha: 0.12),
           textColor: AppTheme.success,
           icon: Icons.check_rounded,
         );
     }
+
   }
 
   factory StatusBadgeWidget.slot(SlotStatus status) {
@@ -106,11 +108,12 @@ class StatusBadgeWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(100),
       ),
+
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
