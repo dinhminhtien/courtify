@@ -1,142 +1,70 @@
-# Flutter
+# 🏸 Courtify - Ứng dụng Đặt Sân Cầu Lông Hiện Đại
 
-A modern Flutter-based mobile application utilizing the latest mobile development technologies and tools for building responsive cross-platform applications.
+Courtify là nền tảng di động giúp người chơi cầu lông dễ dàng tìm kiếm, đặt sân và quản lý lịch thi đấu. Ứng dụng được xây dựng với giao diện hiện đại, trải nghiệm mượt mà và tích hợp hệ thống thông báo thời gian thực.
 
-## 📋 Prerequisites
+![Onboarding Preview](assets/images/onboarding_bg.png)
 
-- Flutter SDK (^3.38.4)
-- Dart SDK
-- Android Studio / VS Code with Flutter extensions
-- Android SDK / Xcode (for iOS development)
+## ✨ Tính năng chính
 
-## 🛠️ Installation
+- **📱 Khám phá & Đặt sân**: Dashboard hiện đại, tìm kiếm sân nhanh chóng và quy trình đặt sân 3 bước (Chọn ngày -> Chọn sân -> Chọn khung giờ).
+- **🔔 Thông báo thời gian thực**: Nhận thông báo tức thì khi có lịch đặt sân mới hoặc cập nhật trạng thái thanh toán qua Supabase Realtime.
+- **💳 Thanh toán tích hợp**: Hỗ trợ thanh toán an toàn, tích hợp Webhook để cập nhật trạng thái tự động.
+- **📊 Quản lý cho Chủ sân**: Dashboard riêng biệt dành cho chủ sân để theo dõi doanh thu và lịch trình sân.
+- **🌑 Giao diện hiện đại**: Thiết kế lấy cảm hứng từ Dribbble với phong cách Glassmorphism, Rounded Corners và Vibrant Accents.
 
-1. Install dependencies:
+## 🛠️ Công nghệ sử dụng
+
+- **Framework**: Flutter (^3.9.0)
+- **State Management**: Riverpod (Notifier & AsyncNotifier)
+- **Backend / Database**: Supabase (Auth, Database, Realtime, Storage, Edge Functions)
+- **Typography**: Google Fonts (Plus Jakarta Sans)
+- **Responsive Design**: Sizer
+- **Payments**: Tích hợp PayOS Webhook
+
+## 📁 Cấu trúc dự án (DDP Architecture)
+
+Dự án tuân thủ kiến trúc **Data-Domain-Presentation** để đảm bảo tính mở rộng và dễ bảo trì:
+
+```
+lib/
+├── core/               # Cấu hình API, Theme và Route chung
+├── features/           # Các tính năng chính của ứng dụng
+│   ├── auth/           # Đăng nhập, Đăng ký, Onboarding, Profile
+│   ├── courts/         # Danh sách sân, Dashboard người dùng
+│   ├── booking/        # Quy trình đặt sân & Lịch sử
+│   ├── payment/        # Xử lý thanh toán
+│   ├── notifications/  # Hệ thống thông báo thời gian thực
+│   └── owner/          # Dashboard & Quản lý cho chủ sân
+├── shared/             # Các widget dùng chung (Navigation, Badges, v.v.)
+└── main.dart           # Điểm khởi đầu ứng dụng
+```
+
+## 🚀 Cài đặt & Chạy ứng dụng
+
+1. **Cài đặt thư viện**:
 ```bash
 flutter pub get
 ```
 
-2. Run the application:
-
-To run the app with environment variables defined in an env.json file, follow the steps mentioned below:
-1. Through CLI
-    ```bash
-    flutter run --dart-define-from-file=env.json
-    ```
-2. For VSCode
-    - Open .vscode/launch.json (create it if it doesn't exist).
-    - Add or modify your launch configuration to include --dart-define-from-file:
-    ```json
-    {
-        "version": "0.2.0",
-        "configurations": [
-            {
-                "name": "Launch",
-                "request": "launch",
-                "type": "dart",
-                "program": "lib/main.dart",
-                "args": [
-                    "--dart-define-from-file",
-                    "env.json"
-                ]
-            }
-        ]
-    }
-    ```
-3. For IntelliJ / Android Studio
-    - Go to Run > Edit Configurations.
-    - Select your Flutter configuration or create a new one.
-    - Add the following to the "Additional arguments" field:
-    ```bash
-    --dart-define-from-file=env.json
-    ```
-
-## 📁 Project Structure
-
+2. **Cấu hình môi trường**:
+Tạo file `.env` ở thư mục gốc và cung cấp các thông tin sau:
 ```
-flutter_app/
-├── android/            # Android-specific configuration
-├── ios/                # iOS-specific configuration
-├── lib/
-│   ├── core/           # Core utilities and services
-│   │   └── utils/      # Utility classes
-│   ├── presentation/   # UI screens and widgets
-│   │   └── splash_screen/ # Splash screen implementation
-│   ├── routes/         # Application routing
-│   ├── theme/          # Theme configuration
-│   ├── widgets/        # Reusable UI components
-│   └── main.dart       # Application entry point
-├── assets/             # Static assets (images, fonts, etc.)
-├── pubspec.yaml        # Project dependencies and configuration
-└── README.md           # Project documentation
+SUPABASE_URL=your_supabase_url
+SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-## 🧩 Adding Routes
-
-To add new routes to the application, update the `lib/routes/app_routes.dart` file:
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:package_name/presentation/home_screen/home_screen.dart';
-
-class AppRoutes {
-  static const String initial = '/';
-  static const String home = '/home';
-
-  static Map<String, WidgetBuilder> routes = {
-    initial: (context) => const SplashScreen(),
-    home: (context) => const HomeScreen(),
-    // Add more routes as needed
-  }
-}
-```
-
-## 🎨 Theming
-
-This project includes a comprehensive theming system with both light and dark themes:
-
-```dart
-// Access the current theme
-ThemeData theme = Theme.of(context);
-
-// Use theme colors
-Color primaryColor = theme.colorScheme.primary;
-```
-
-The theme configuration includes:
-- Color schemes for light and dark modes
-- Typography styles
-- Button themes
-- Input decoration themes
-- Card and dialog themes
-
-## 📱 Responsive Design
-
-The app is built with responsive design using the Sizer package:
-
-```dart
-// Example of responsive sizing
-Container(
-  width: 50.w, // 50% of screen width
-  height: 20.h, // 20% of screen height
-  child: Text('Responsive Container'),
-)
-```
-## 📦 Deployment
-
-Build the application for production:
-
+3. **Chạy ứng dụng**:
 ```bash
-# For Android
-flutter build apk --release
-
-# For iOS
-flutter build ios --release
+flutter run
 ```
 
-## 🙏 Acknowledgments
-- Built with [Rocket.new](https://rocket.new)
-- Powered by [Flutter](https://flutter.dev) & [Dart](https://dart.dev)
-- Styled with Material Design
+## 📅 Lộ trình phát triển
 
-Built with ❤️ on Rocket.new
+- [x] Onboarding & Modern Dashboard
+- [x] Tách biệt màn hình Trang chủ & Đặt sân
+- [x] Hệ thống thông báo Realtime
+- [ ] Tính năng tìm kiếm sân nâng cao (theo bản đồ)
+- [ ] Tích hợp ví điện tử nội bộ
+
+---
+Built with ❤️ by Courtify Team
