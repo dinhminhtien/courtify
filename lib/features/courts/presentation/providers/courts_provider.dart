@@ -92,7 +92,12 @@ class CourtsNotifier extends Notifier<CourtsState> {
   }
 
   Future<void> refresh() async {
-    state = state.copyWith(isLoading: true, clearError: true, courts: []);
+    state = state.copyWith(
+      isLoading: true,
+      clearError: true,
+      courts: [],
+      selectedCourtIndex: 0,
+    );
     await loadInitialData();
   }
 

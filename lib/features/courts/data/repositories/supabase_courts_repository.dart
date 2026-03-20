@@ -111,8 +111,17 @@ class SupabaseCourtsRepository implements CourtsRepository {
     if (payload.eventType == PostgresChangeEvent.update && newMap.isNotEmpty) {
       final newSlot = CourtSlotModel.fromJson(newMap);
       final newSlotDate = newSlot.slotDate.toIso8601String().split('T')[0];
+      final exists = currentSlots.any((s) => s.id == newSlot.id);
       if (newSlotDate == dateStr) {
-        currentSlots = currentSlots.map((s) => s.id == newSlot.id ? newSlot : s).toList();
+        if (exists) {
+          currentSlots = currentSlots.map((s) => s.id == newSlot.id ? newSlot : s).toList();
+        } else {
+          currentSlots = [...currentSlots, newSlot]..sort((a,b) => a.startTime.compareTo(b.startTime));
+        }
+        onUpdate(currentSlots);
+      } else if (exists) {
+        // Slot moved FROM today TO another date, remove it
+        currentSlots = currentSlots.where((s) => s.id != newSlot.id).toList();
         onUpdate(currentSlots);
       }
     } else if (payload.eventType == PostgresChangeEvent.insert && newMap.isNotEmpty) {
