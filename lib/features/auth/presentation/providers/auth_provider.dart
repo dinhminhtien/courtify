@@ -5,6 +5,10 @@ import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import '../../domain/entities/user_entity.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../../data/repositories/supabase_auth_repository.dart';
+import '../../../courts/presentation/providers/courts_provider.dart';
+import '../../../booking/presentation/providers/bookings_provider.dart';
+import '../../../payment/presentation/providers/payment_provider.dart';
+import '../../../owner/presentation/providers/owner_dashboard_provider.dart';
 
 // ─── Repository Provider ──────────────────────────────────────────────────────
 
@@ -125,6 +129,12 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> signOut() async {
     await _authRepository.signOut();
+    // Invalidate session-specific providers
+    ref.invalidate(courtsProvider);
+    ref.invalidate(bookingsProvider);
+    ref.invalidate(paymentProvider);
+    ref.invalidate(ownerDashboardProvider);
+    
     state = const AuthState(user: null);
   }
 

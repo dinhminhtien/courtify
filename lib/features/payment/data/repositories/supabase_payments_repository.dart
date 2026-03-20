@@ -190,17 +190,7 @@ class SupabasePaymentsRepository implements PaymentsRepository {
         );
       }
 
-      // Create Notification
-      if (userId != null) {
-        await _createNotification(
-          userId: userId,
-          title: 'Yêu cầu đặt sân mới',
-          content: 'Bạn đã chọn thanh toán tại sân cho booking $bookingId. Vui lòng đến đúng giờ.',
-          type: 'booking_confirmed',
-          referenceId: bookingId,
-        );
-      }
-
+      // Notification handled by Trigger
       return PaymentModel.fromJson(data);
 
     } catch (e) {
@@ -285,17 +275,7 @@ class SupabasePaymentsRepository implements PaymentsRepository {
         );
       }
 
-      // Create Notification
-      if (userId != null) {
-        await _createNotification(
-          userId: userId,
-          title: 'Thanh toán thành công',
-          content: 'Booking $bookingId đã được xác nhận và thanh toán thành công. Hẹn gặp bạn tại sân!',
-          type: 'payment_success',
-          referenceId: bookingId,
-        );
-      }
-
+      // Notification handled by Trigger
       final data = await _client
 
           .from('payments')
@@ -326,25 +306,5 @@ class SupabasePaymentsRepository implements PaymentsRepository {
     }
   }
 
-  Future<void> _createNotification({
-    required String userId,
-    required String title,
-    required String content,
-    required String type,
-    String? referenceId,
-  }) async {
-    try {
-      await _client.from('notifications').insert({
-        'user_id': userId,
-        'title': title,
-        'content': content,
-        'type': type,
-        'reference_id': referenceId,
-        'is_read': false,
-      });
-    } catch (e) {
-      debugPrint('Error creating notification: $e');
-    }
-  }
 }
 

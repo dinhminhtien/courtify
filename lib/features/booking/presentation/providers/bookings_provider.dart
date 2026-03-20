@@ -54,7 +54,7 @@ class BookingsState {
 // ─── Bookings Notifier ────────────────────────────────────────────────────────
 
 class BookingsNotifier extends Notifier<BookingsState> {
-  late final BookingsRepository _bookingsRepository;
+  BookingsRepository? _bookingsRepository;
 
   @override
   BookingsState build() {
@@ -65,7 +65,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
   Future<void> loadUserBookings() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final bookings = await _bookingsRepository.getUserBookings();
+      final bookings = await _bookingsRepository!.getUserBookings();
       state = state.copyWith(
         bookings: bookings.map((b) => b.toDisplayMap()).toList(),
         isLoading: false,
@@ -79,7 +79,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
   Future<void> loadAllBookings() async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final bookings = await _bookingsRepository.getAllBookings();
+      final bookings = await _bookingsRepository!.getAllBookings();
       state = state.copyWith(
         bookings: bookings.map((b) => b.toDisplayMap()).toList(),
         isLoading: false,
@@ -96,7 +96,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
   }) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final booking = await _bookingsRepository.createBooking(
+      final booking = await _bookingsRepository!.createBooking(
         slotIds: slotIds,
         courtId: courtId,
       );
@@ -121,7 +121,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
 
   Future<void> cancelBooking(String bookingId) async {
     try {
-      await _bookingsRepository.cancelBooking(bookingId);
+      await _bookingsRepository!.cancelBooking(bookingId);
       await loadUserBookings();
     } catch (e) {
       debugPrint('Cancel booking error: $e');
@@ -131,7 +131,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
 
   Future<void> confirmBooking(String bookingId) async {
     try {
-      await _bookingsRepository.confirmBooking(bookingId);
+      await _bookingsRepository!.confirmBooking(bookingId);
       await loadAllBookings();
     } catch (e) {
       debugPrint('Confirm booking error: $e');
@@ -141,7 +141,7 @@ class BookingsNotifier extends Notifier<BookingsState> {
 
   Future<void> completeBooking(String bookingId) async {
     try {
-      await _bookingsRepository.completeBooking(bookingId);
+      await _bookingsRepository!.completeBooking(bookingId);
       await loadAllBookings();
     } catch (e) {
       debugPrint('Complete booking error: $e');

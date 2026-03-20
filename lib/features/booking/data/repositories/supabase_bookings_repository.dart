@@ -17,18 +17,30 @@ class SupabaseBookingsRepository implements BookingsRepository {
     if (userId == null) throw Exception('User not logged in');
 
     try {
-      // Basic implementation for a single slot for now, as per original logic
-      final data = await _client.from('bookings').insert({
+      final holdExpiresAt = DateTime.now().add(const Duration(minutes: 10)).toIso8601String();
+      
+      // Insert multiple rows, one for each slot
+      final List<Map<String, dynamic>> bookingsToInsert = slotIds.map((slotId) => {
         'user_id': userId,
         'court_id': courtId,
-        'slot_id': slotIds.first,
+        'slot_id': slotId,
         'status': 'PENDING',
         'payment_status': 'UNPAID',
-        'hold_expires_at':
-            DateTime.now().add(const Duration(minutes: 10)).toIso8601String(),
-      }).select('*, court_slots(*), courts(*)').single();
+        'hold_expires_at': holdExpiresAt,
+      }).toList();
 
-      return BookingModel.fromJson(data);
+      // Transaction-like approach: Create bookings AND update slots
+      final data = await _client.from('bookings').insert(bookingsToInsert).select('*, court_slots(*), courts(*)');
+      
+      // Update the slots themselves to HOLD status
+      await _client
+          .from('court_slots')
+          .update({'status': 'HOLD'})
+          .inFilter('id', slotIds);
+
+      if ((data as List).isEmpty) return null;
+      
+      return BookingModel.fromJson(data.first);
     } catch (e) {
       debugPrint('Create booking error: $e');
       rethrow;
@@ -76,15 +88,7 @@ class SupabaseBookingsRepository implements BookingsRepository {
           .from('bookings')
           .update({'status': 'CANCELLED'}).eq('id', bookingId);
 
-      // Create Notification
-      final booking = await _client.from('bookings').select('user_id').eq('id', bookingId).single();
-      await _createNotification(
-        userId: booking['user_id'],
-        title: 'Booking đã hủy',
-        content: 'Booking $bookingId của bạn đã được hủy thành công.',
-        type: 'reminder',
-        referenceId: bookingId,
-      );
+      // Notification is handled by SQL Trigger
     } catch (e) {
       debugPrint('Cancel booking error: $e');
       rethrow;
@@ -94,9 +98,20 @@ class SupabaseBookingsRepository implements BookingsRepository {
   @override
   Future<void> confirmBooking(String bookingId) async {
     try {
+      // 1. Get the booking to find the slots
+      final booking = await _client.from('bookings').select('slot_id').eq('id', bookingId).single();
+      final slotId = booking['slot_id'] as String;
+
+      // 2. Update booking status
       await _client
           .from('bookings')
           .update({'status': 'CONFIRMED'}).eq('id', bookingId);
+      
+      // 3. Update slot status to BOOKED
+      await _client
+          .from('court_slots')
+          .update({'status': 'BOOKED'})
+          .eq('id', slotId);
     } catch (e) {
       debugPrint('Confirm booking error: $e');
       rethrow;
@@ -110,40 +125,12 @@ class SupabaseBookingsRepository implements BookingsRepository {
           .from('bookings')
           .update({'status': 'COMPLETED'}).eq('id', bookingId);
 
-      // Create Notification
-      final booking = await _client.from('bookings').select('user_id').eq('id', bookingId).single();
-      await _createNotification(
-        userId: booking['user_id'],
-        title: 'Booking hoàn tất',
-        content: 'Cảm ơn bạn đã sử dụng dịch vụ! Booking $bookingId đã hoàn tất.',
-        type: 'reminder',
-        referenceId: bookingId,
-      );
+      // Notification is handled by SQL Trigger
     } catch (e) {
       debugPrint('Complete booking error: $e');
       rethrow;
     }
   }
 
-  Future<void> _createNotification({
-    required String userId,
-    required String title,
-    required String content,
-    required String type,
-    String? referenceId,
-  }) async {
-    try {
-      await _client.from('notifications').insert({
-        'user_id': userId,
-        'title': title,
-        'content': content,
-        'type': type,
-        'reference_id': referenceId,
-        'is_read': false,
-      });
-    } catch (e) {
-      debugPrint('Error creating notification: $e');
-    }
-  }
 }
 

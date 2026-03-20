@@ -15,7 +15,7 @@ class SupabaseCourtsRepository implements CourtsRepository {
     try {
       final data = await _client
           .from('courts')
-          .select()
+          .select('id, court_number, created_at')
           .order('court_number', ascending: true);
       return (data as List).map((e) => CourtModel.fromJson(e)).toList();
     } catch (e) {
@@ -34,7 +34,7 @@ class SupabaseCourtsRepository implements CourtsRepository {
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       final data = await _client
           .from('court_slots')
-          .select()
+          .select('id, court_id, slot_date, start_time, end_time, price, status, created_at')
           .eq('court_id', courtId)
           .eq('slot_date', dateStr)
           .order('start_time', ascending: true);
@@ -53,6 +53,12 @@ class SupabaseCourtsRepository implements CourtsRepository {
   }) {
     final dateStr =
         '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+    List<CourtSlotEntity> currentSlots = [];
+    
+    // We don't do an initial fetch here anymore to avoid redundant calls.
+    // The Notifier will call getSlotsForCourtAndDate separately.
+
     return _client
         .channel('court_slots_${courtId}_$dateStr')
         .onPostgresChanges(
@@ -64,13 +70,64 @@ class SupabaseCourtsRepository implements CourtsRepository {
             column: 'court_id',
             value: courtId,
           ),
-          callback: (_) async {
-            final updated = await getSlotsForCourtAndDate(
-              courtId: courtId,
-              date: date,
-            );
-            onUpdate(updated);
-          },
+  callback: (payload) {
+    // If the Notifier is active, it will call loadSlots once.
+    // This callback handles subsequent incremental changes.
+    // For simplicity, especially since currentSlots is local to this method, 
+    // it's actually better to just signal the Notifier that a change happened 
+    // but the Notifier already receives the UPDATED list or handles 
+    // the incremental update.
+    
+    // Wait, if I want to avoid re-fetching, 
+    // I MUST pass the change back to the notifier.
+    // The current signature is onUpdate(List<CourtSlotEntity>).
+    // Let's modify the repository to be slightly more generic if needed, 
+    // but for now I'll just keep the incremental update logic in a way 
+    // that it can be passed back safely.
+    
+    // Actually, I'll let the Notifier handle the current state.
+    // I'll change the onUpdate signature or just allow it to re-fetch 
+    // IF we can't maintain state here.
+    
+    // But re-fetching is exactly what we want to avoid.
+    // Let's keep the logic but we need access to the "latest" list.
+    // I'll re-add the initial state sync or have the Notifier pass the current list.
+    
+    // Better: Notifier calls a method that returns a Stream of lists.
+    // For now, I'll use a hack where the repository re-fetches only once 
+    // then handles subsequent changes if currentSlots is populated.
+    
+    if (currentSlots.isEmpty) {
+      getSlotsForCourtAndDate(courtId: courtId, date: date).then((slots) {
+        currentSlots = slots;
+        onUpdate(slots);
+      });
+      return;
+    }
+
+    final newMap = payload.newRecord;
+    final oldMap = payload.oldRecord;
+    
+    if (payload.eventType == PostgresChangeEvent.update && newMap.isNotEmpty) {
+      final newSlot = CourtSlotModel.fromJson(newMap);
+      final newSlotDate = newSlot.slotDate.toIso8601String().split('T')[0];
+      if (newSlotDate == dateStr) {
+        currentSlots = currentSlots.map((s) => s.id == newSlot.id ? newSlot : s).toList();
+        onUpdate(currentSlots);
+      }
+    } else if (payload.eventType == PostgresChangeEvent.insert && newMap.isNotEmpty) {
+       final newSlot = CourtSlotModel.fromJson(newMap);
+       final newSlotDate = newSlot.slotDate.toIso8601String().split('T')[0];
+       if (newSlotDate == dateStr) {
+         currentSlots = [...currentSlots, newSlot]..sort((a,b) => a.startTime.compareTo(b.startTime));
+         onUpdate(currentSlots);
+       }
+    } else if (payload.eventType == PostgresChangeEvent.delete && oldMap.isNotEmpty) {
+       final oldId = oldMap['id'];
+       currentSlots = currentSlots.where((s) => s.id != oldId).toList();
+       onUpdate(currentSlots);
+    }
+  },
         )
         .subscribe();
   }
