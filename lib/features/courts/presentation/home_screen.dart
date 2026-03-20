@@ -8,6 +8,7 @@ import './providers/courts_provider.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 import '../../../shared/widgets/app_navigation.dart';
 import './widgets/home_app_bar_widget.dart';
+import '../../courts/domain/entities/court.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
 
@@ -51,9 +52,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: isTablet
-            ? _buildTabletLayout(userName, availableCount, courtsState, courtsNotifier)
-            : _buildPhoneLayout(userName, availableCount, courtsState, courtsNotifier),
+        child: RefreshIndicator(
+          onRefresh: () => ref.read(courtsProvider.notifier).refresh(),
+          color: AppTheme.primary,
+          child: isTablet
+              ? _buildTabletLayout(userName, availableCount, courtsState, courtsNotifier)
+              : _buildPhoneLayout(userName, availableCount, courtsState, courtsNotifier),
+        ),
       ),
       bottomNavigationBar: CustomerBottomNav(
         currentTab: _currentTab,
@@ -155,15 +160,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               const SizedBox(height: 28),
               _buildSectionHeader('Sân phổ biến'),
               const SizedBox(height: 16),
-              SizedBox(
-                height: 220,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: 3,
-                  itemBuilder: (context, index) => _buildPopularCourtCard(index),
+              if (courtsState.isLoading && courtsState.courts.isEmpty)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: 40),
+                    child: CircularProgressIndicator(color: AppTheme.primary),
+                  ),
+                )
+              else if (courtsState.error != null && courtsState.courts.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20),
+                    child: Text(
+                      'Không thể tải dữ liệu sân',
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.error),
+                    ),
+                  ),
+                )
+              else if (courtsState.courts.isEmpty)
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Text(
+                      'Hiện chưa có sân nào',
+                      style: GoogleFonts.plusJakartaSans(color: AppTheme.muted),
+                    ),
+                  ),
+                )
+              else
+                SizedBox(
+                  height: 240,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: courtsState.courts.length,
+                    itemBuilder: (context, index) => 
+                        _buildPopularCourtCard(courtsState.courts[index]),
+                  ),
                 ),
-              ),
               const SizedBox(height: 100),
             ],
           ),
@@ -279,69 +313,94 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildPopularCourtCard(int index) {
-    return Container(
-      width: 280,
-      margin: const EdgeInsets.only(right: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10, offset: const Offset(0, 4)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 130,
-            decoration: BoxDecoration(
-              color: AppTheme.primary.withAlpha(20),
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-              image: const DecorationImage(
-                image: NetworkImage(
-                    'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=400&auto=format&fit=crop'),
-                fit: BoxFit.cover,
+  Widget _buildPopularCourtCard(CourtEntity court) {
+    return GestureDetector(
+      onTap: () => _onTabChanged(AppNavTab.booking),
+      child: Container(
+        width: 280,
+        margin: const EdgeInsets.only(right: 16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha(10),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              height: 140,
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withAlpha(20),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                image: const DecorationImage(
+                  image: NetworkImage(
+                    'https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?q=80&w=400&auto=format&fit=crop',
+                  ),
+                  fit: BoxFit.cover,
+                ),
+              ),
+              child: Stack(
+                children: [
+                  Positioned(
+                    top: 12,
+                    right: 12,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                      child: const Icon(Icons.favorite_rounded, color: Colors.red, size: 16),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: 12,
+                    left: 12,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withAlpha(150),
+                        borderRadius: BorderRadius.circular(100),
+                      ),
+                      child: Text(
+                        court.label,
+                        style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            child: Stack(
-              children: [
-                Positioned(
-                  top: 12,
-                  right: 12,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                    child: const Icon(Icons.favorite_rounded, color: Colors.red, size: 16),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    court.label,
+                    style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 15),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                ),
-              ],
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
+                      const SizedBox(width: 4),
+                      Text(
+                        '4.8 (120+ đánh giá)',
+                        style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.muted),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Sân Cầu Lông SmashZone ${index + 1}',
-                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 15),
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    const Icon(Icons.star_rounded, color: Colors.amber, size: 16),
-                    const SizedBox(width: 4),
-                    Text(
-                      '4.8 (120+ đánh giá)',
-                      style: GoogleFonts.plusJakartaSans(fontSize: 12, color: AppTheme.muted),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -352,7 +411,47 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     CourtsState courtsState,
     CourtsNotifier courtsNotifier,
   ) {
-    return Center(child: Text('Tablet layout placeholder - please switch to booking screen'));
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(),
+      slivers: [
+        HomeAppBarWidget(userName: userName, availableCount: availableCount),
+        SliverPadding(
+          padding: const EdgeInsets.all(24),
+          sliver: SliverToBoxAdapter(
+            child: _buildBannerSlider(),
+          ),
+        ),
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          sliver: SliverToBoxAdapter(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildSectionHeader('Sân phổ biến'),
+                const SizedBox(height: 16),
+                if (courtsState.isLoading && courtsState.courts.isEmpty)
+                  const Center(child: CircularProgressIndicator())
+                else
+                  GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      mainAxisExtent: 260,
+                    ),
+                    itemCount: courtsState.courts.length,
+                    itemBuilder: (context, index) =>
+                        _buildPopularCourtCard(courtsState.courts[index]),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 100)),
+      ],
+    );
   }
 
   Widget _buildSectionHeader(String title) {

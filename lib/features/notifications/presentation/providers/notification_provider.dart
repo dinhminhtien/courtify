@@ -8,9 +8,9 @@ import '../../domain/usecases/get_notifications_usecase.dart';
 import '../../domain/usecases/mark_all_notifications_read_usecase.dart';
 import '../../domain/usecases/mark_notification_read_usecase.dart';
 import '../../data/datasources/notification_remote_data_source.dart';
+import '../../data/models/notification_model.dart';
 import '../../data/repositories/notification_repository_impl.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
-import '../../../auth/domain/entities/user_entity.dart';
 
 
 // ─── Data Source & Repository Providers ─────────────────────────────────────
@@ -53,7 +53,6 @@ class NotificationState {
     this.isLoading = false,
     this.error,
   });
-
   NotificationState copyWith({
     List<NotificationEntity>? notifications,
     bool? isLoading,
@@ -72,9 +71,9 @@ class NotificationState {
 // ─── Notifier ─────────────────────────────────────────────────────────
 
 class NotificationNotifier extends Notifier<NotificationState> {
-  late final GetNotificationsUseCase _getNotificationsUseCase;
-  late final MarkNotificationReadUseCase _markNotificationReadUseCase;
-  late final MarkAllNotificationsReadUseCase _markAllNotificationsReadUseCase;
+  GetNotificationsUseCase? _getNotificationsUseCase;
+  MarkNotificationReadUseCase? _markNotificationReadUseCase;
+  MarkAllNotificationsReadUseCase? _markAllNotificationsReadUseCase;
   RealtimeChannel? _realtimeChannel;
 
   @override
@@ -83,23 +82,18 @@ class NotificationNotifier extends Notifier<NotificationState> {
     _markNotificationReadUseCase = ref.watch(markNotificationReadUseCaseProvider);
     _markAllNotificationsReadUseCase = ref.watch(markAllNotificationsReadUseCaseProvider);
 
-    // Watch user changes
-    ref.listen<UserEntity?>(currentUserProvider, (previous, next) {
-      if (next != null) {
-        fetchNotifications();
-      } else {
-        state = const NotificationState();
-      }
-    });
+    final user = ref.watch(currentUserProvider);
 
-
-    // Load initial data if user is already present
-    final user = ref.read(currentUserProvider);
     if (user != null) {
+      // Logic to run whenever the user changes (login/refresh)
       Future.microtask(() {
         fetchNotifications();
         _setupRealtime(user.id);
       });
+    } else {
+      // Clean up if user logs out
+      _realtimeChannel?.unsubscribe();
+      return const NotificationState();
     }
 
     return const NotificationState();
@@ -121,7 +115,16 @@ class NotificationNotifier extends Notifier<NotificationState> {
             value: userId,
           ),
           callback: (payload) {
-            fetchNotifications();
+            if (payload.eventType == PostgresChangeEvent.insert && payload.newRecord.isNotEmpty) {
+                try {
+                   final newNoti = NotificationModel.fromJson(payload.newRecord);
+                   state = state.copyWith(notifications: [newNoti, ...state.notifications]);
+                } catch (e) {
+                   fetchNotifications();
+                }
+            } else {
+               fetchNotifications();
+            }
           },
         )
         .subscribe();
@@ -134,7 +137,7 @@ class NotificationNotifier extends Notifier<NotificationState> {
 
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final notifications = await _getNotificationsUseCase(user.id);
+      final notifications = await _getNotificationsUseCase!(user.id);
       state = state.copyWith(notifications: notifications, isLoading: false);
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -143,7 +146,7 @@ class NotificationNotifier extends Notifier<NotificationState> {
 
   Future<void> markAsRead(String notificationId) async {
     try {
-      await _markNotificationReadUseCase(notificationId);
+      await _markNotificationReadUseCase!(notificationId);
       state = state.copyWith(
         notifications: state.notifications.map((n) {
           if (n.id == notificationId) {
@@ -162,7 +165,7 @@ class NotificationNotifier extends Notifier<NotificationState> {
     if (user == null) return;
 
     try {
-      await _markAllNotificationsReadUseCase(user.id);
+      await _markAllNotificationsReadUseCase!(user.id);
       state = state.copyWith(
         notifications: state.notifications.map((n) => n.copyWith(isRead: true)).toList(),
       );

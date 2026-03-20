@@ -55,12 +55,13 @@ class CourtsState {
 // ─── Courts Notifier ──────────────────────────────────────────────────────────
 
 class CourtsNotifier extends Notifier<CourtsState> {
-  late final CourtsRepository _courtsRepository;
+  CourtsRepository? _courtsRepository;
   RealtimeChannel? _slotsSubscription;
 
   @override
   CourtsState build() {
     _courtsRepository = ref.watch(courtsRepositoryProvider);
+    ref.keepAlive();
     ref.onDispose(() {
       _slotsSubscription?.unsubscribe();
     });
@@ -70,9 +71,15 @@ class CourtsNotifier extends Notifier<CourtsState> {
   }
 
   Future<void> loadInitialData() async {
+    if (state.courts.isNotEmpty) {
+      await loadSlots();
+      subscribeToSlots();
+      return;
+    }
+    
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final courts = await _courtsRepository.getCourts();
+      final courts = await _courtsRepository!.getCourts();
       state = state.copyWith(courts: courts, isLoading: false);
       if (courts.isNotEmpty) {
         await loadSlots();
@@ -84,12 +91,17 @@ class CourtsNotifier extends Notifier<CourtsState> {
     }
   }
 
+  Future<void> refresh() async {
+    state = state.copyWith(isLoading: true, clearError: true, courts: []);
+    await loadInitialData();
+  }
+
   Future<void> loadSlots() async {
     if (state.courts.isEmpty) return;
     state = state.copyWith(isLoading: true);
     try {
       final court = state.courts[state.selectedCourtIndex];
-      final slots = await _courtsRepository.getSlotsForCourtAndDate(
+      final slots = await _courtsRepository!.getSlotsForCourtAndDate(
         courtId: court.id,
         date: state.selectedDate,
       );
@@ -104,7 +116,7 @@ class CourtsNotifier extends Notifier<CourtsState> {
     _slotsSubscription?.unsubscribe();
     if (state.courts.isEmpty) return;
     final court = state.courts[state.selectedCourtIndex];
-    _slotsSubscription = _courtsRepository.subscribeToSlots(
+    _slotsSubscription = _courtsRepository!.subscribeToSlots(
       courtId: court.id,
       date: state.selectedDate,
       onUpdate: (updatedSlots) {

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../auth/presentation/providers/auth_provider.dart';
+import '../providers/courts_provider.dart';
 import '../../../../routes/app_routes.dart';
 import '../../../notifications/presentation/providers/notification_provider.dart';
 
@@ -206,6 +207,15 @@ class HomeAppBarWidget extends ConsumerWidget {
       ),
       titleSpacing: 20,
       actions: [
+        IconButton(
+          tooltip: 'Tải lại',
+          icon: const Icon(
+            Icons.refresh_rounded,
+            color: AppTheme.primary,
+            size: 22,
+          ),
+          onPressed: () => ref.read(courtsProvider.notifier).refresh(),
+        ),
         IconButton(
           tooltip: 'Đăng xuất',
           icon: const Icon(

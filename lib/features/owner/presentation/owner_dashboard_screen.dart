@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../../payment/presentation/providers/payment_provider.dart';
+import './providers/owner_dashboard_provider.dart';
 import '../../auth/presentation/providers/auth_provider.dart';
 import '../../../routes/app_routes.dart';
 import '../../../shared/widgets/app_navigation.dart';
@@ -13,6 +13,7 @@ import './widgets/owner_recent_bookings_widget.dart';
 import './widgets/owner_revenue_chart_widget.dart';
 import '../../../shared/widgets/custom_error_widget.dart';
 import '../../notifications/presentation/providers/notification_provider.dart';
+import '../../courts/presentation/providers/courts_provider.dart';
 
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
@@ -137,17 +138,11 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
     Widget bodyContent;
 
     if (_currentTab == OwnerNavTab.manage) {
-      bodyContent = _buildPlaceholderBody(
-        'Quản lý sân',
-        Icons.manage_accounts_rounded,
-      );
+      bodyContent = _buildManageCourtsTab();
     } else if (_currentTab == OwnerNavTab.schedule) {
-      bodyContent = _buildPlaceholderBody(
-        'Lịch đặt sân',
-        Icons.calendar_month_rounded,
-      );
+      bodyContent = _buildScheduleTab(dashboardState.bookings);
     } else if (_currentTab == OwnerNavTab.settings) {
-      bodyContent = _buildPlaceholderBody('Cài đặt', Icons.settings_rounded);
+      bodyContent = _buildSettingsTab();
     } else if (dashboardState.error != null) {
       bodyContent = CustomErrorWidget(errorMessage: dashboardState.error);
     } else {
@@ -202,31 +197,125 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
     );
   }
 
-  Widget _buildPlaceholderBody(String title, IconData icon) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: AppTheme.primary.withAlpha(100)),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.primary,
-            ),
+  Widget _buildManageCourtsTab() {
+    final courtsState = ref.watch(courtsProvider);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildInternalHeader('Quản lý sân'),
+        Expanded(
+          child: courtsState.isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: courtsState.courts.length,
+                  itemBuilder: (context, index) {
+                    final court = courtsState.courts[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor: AppTheme.primaryContainer,
+                          child: const Icon(Icons.sports_tennis_rounded, color: AppTheme.primary),
+                        ),
+                        title: Text(court.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Text('Sân số ${court.courtNumber}'),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () {},
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScheduleTab(List<Map<String, dynamic>> bookings) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildInternalHeader('Lịch đặt sân'),
+        Expanded(
+          child: bookings.isEmpty
+              ? const Center(child: Text('Chưa có lịch đặt nào'))
+              : ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: bookings.length,
+                  itemBuilder: (context, index) {
+                    final booking = bookings[index];
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        title: Text(booking['customerName'] as String),
+                        subtitle: Text('${booking['courtLabel']} · ${booking['startTime']}'),
+                        trailing: Text(
+                          booking['status'] as String,
+                          style: TextStyle(
+                            color: booking['status'] == 'CONFIRMED' ? Colors.green : Colors.orange,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSettingsTab() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildInternalHeader('Cài đặt'),
+        Expanded(
+          child: ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            children: [
+              _buildSettingItem('Thông tin tài khoản', Icons.person_outline),
+              _buildSettingItem('Thông báo', Icons.notifications_none),
+              _buildSettingItem('Bảo mật', Icons.lock_outline),
+              _buildSettingItem('Trợ giúp', Icons.help_outline),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.logout, color: Colors.red),
+                title: const Text('Đăng xuất', style: TextStyle(color: Colors.red)),
+                onTap: _confirmLogout,
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          Text(
-            'Tính năng đang phát triển',
-            style: GoogleFonts.plusJakartaSans(
-              fontSize: 14,
-              color: AppTheme.muted,
-            ),
-          ),
-        ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildInternalHeader(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+      child: Text(
+        title,
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.primary,
+        ),
       ),
+    );
+  }
+
+  Widget _buildSettingItem(String title, IconData icon) {
+    return ListTile(
+      leading: Icon(icon, color: AppTheme.muted),
+      title: Text(title),
+      trailing: const Icon(Icons.chevron_right, size: 20),
+      onTap: () {},
     );
   }
 
