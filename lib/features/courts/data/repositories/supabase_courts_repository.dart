@@ -32,6 +32,36 @@ class SupabaseCourtsRepository implements CourtsRepository {
     try {
       final dateStr =
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
+
+      // 1. Lazy Release: Check and release expired holds
+      // This ensures that when a user views slots, they see the most up-to-date availability
+      try {
+        final now = DateTime.now().toUtc().toIso8601String();
+        
+        // Find bookings that have expired holds
+        final expiredBookings = await _client
+            .from('bookings')
+            .select('id, slot_id')
+            .eq('status', 'PENDING')
+            .lt('hold_expires_at', now);
+
+        if ((expiredBookings as List).isNotEmpty) {
+           final bookingIds = expiredBookings.map((b) => b['id'] as String).toList();
+           final slotIds = expiredBookings.map((b) => b['slot_id'] as String).toList();
+           
+           // Update bookings to CANCELLED
+           await _client.from('bookings').update({'status': 'CANCELLED'}).inFilter('id', bookingIds);
+           
+           // Update slots to AVAILABLE
+           await _client.from('court_slots').update({'status': 'AVAILABLE'}).inFilter('id', slotIds);
+           
+           debugPrint('Auto-released ${slotIds.length} expired slots');
+        }
+      } catch (e) {
+        debugPrint('Lazy release error (ignored): $e');
+      }
+
+      // 2. Fetch slots
       final data = await _client
           .from('court_slots')
           .select('id, court_id, slot_date, start_time, end_time, price, status, created_at')

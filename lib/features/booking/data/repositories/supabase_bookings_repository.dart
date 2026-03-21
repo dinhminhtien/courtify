@@ -17,7 +17,7 @@ class SupabaseBookingsRepository implements BookingsRepository {
     if (userId == null) throw Exception('User not logged in');
 
     try {
-      final holdExpiresAt = DateTime.now().add(const Duration(minutes: 10)).toIso8601String();
+      final holdExpiresAt = DateTime.now().add(const Duration(minutes: 10)).toUtc().toIso8601String();
       
       // Insert multiple rows, one for each slot
       final List<Map<String, dynamic>> bookingsToInsert = slotIds.map((slotId) => {
@@ -84,11 +84,55 @@ class SupabaseBookingsRepository implements BookingsRepository {
   @override
   Future<void> cancelBooking(String bookingId) async {
     try {
-      await _client
+      // 1. Get the booking to find group info
+      final bookingDetails = await _client
           .from('bookings')
-          .update({'status': 'CANCELLED'}).eq('id', bookingId);
+          .select('user_id, court_id, hold_expires_at, slot_id')
+          .eq('id', bookingId)
+          .maybeSingle();
 
-      // Notification is handled by SQL Trigger
+      if (bookingDetails == null) return;
+
+      final userId = bookingDetails['user_id'];
+      final courtId = bookingDetails['court_id'];
+      final holdExpiresAt = bookingDetails['hold_expires_at'];
+
+      List<String> slotIds = [];
+
+      if (holdExpiresAt != null) {
+        // Group cancellation
+        final related = await _client
+            .from('bookings')
+            .select('id, slot_id')
+            .eq('user_id', userId)
+            .eq('court_id', courtId)
+            .eq('hold_expires_at', holdExpiresAt);
+
+        slotIds = (related as List).map((r) => r['slot_id'] as String).toList();
+
+        // Update all related bookings
+        await _client
+            .from('bookings')
+            .update({'status': 'CANCELLED'})
+            .eq('user_id', userId)
+            .eq('court_id', courtId)
+            .eq('hold_expires_at', holdExpiresAt);
+      } else {
+        // Single cancellation
+        slotIds = [bookingDetails['slot_id'] as String];
+        await _client
+            .from('bookings')
+            .update({'status': 'CANCELLED'})
+            .eq('id', bookingId);
+      }
+
+      // 2. Release slots back to AVAILABLE
+      if (slotIds.isNotEmpty) {
+        await _client
+            .from('court_slots')
+            .update({'status': 'AVAILABLE'})
+            .inFilter('id', slotIds);
+      }
     } catch (e) {
       debugPrint('Cancel booking error: $e');
       rethrow;
@@ -98,20 +142,54 @@ class SupabaseBookingsRepository implements BookingsRepository {
   @override
   Future<void> confirmBooking(String bookingId) async {
     try {
-      // 1. Get the booking to find the slots
-      final booking = await _client.from('bookings').select('slot_id').eq('id', bookingId).single();
-      final slotId = booking['slot_id'] as String;
-
-      // 2. Update booking status
-      await _client
+      // 1. Get the booking to find group info
+      final bookingDetails = await _client
           .from('bookings')
-          .update({'status': 'CONFIRMED'}).eq('id', bookingId);
-      
-      // 3. Update slot status to BOOKED
-      await _client
-          .from('court_slots')
-          .update({'status': 'BOOKED'})
-          .eq('id', slotId);
+          .select('user_id, court_id, hold_expires_at, slot_id')
+          .eq('id', bookingId)
+          .maybeSingle();
+
+      if (bookingDetails == null) return;
+
+      final userId = bookingDetails['user_id'];
+      final courtId = bookingDetails['court_id'];
+      final holdExpiresAt = bookingDetails['hold_expires_at'];
+
+      List<String> slotIds = [];
+
+      if (holdExpiresAt != null) {
+        // Group confirmation
+        final related = await _client
+            .from('bookings')
+            .select('slot_id')
+            .eq('user_id', userId)
+            .eq('court_id', courtId)
+            .eq('hold_expires_at', holdExpiresAt);
+
+        slotIds = (related as List).map((r) => r['slot_id'] as String).toList();
+
+        await _client
+            .from('bookings')
+            .update({'status': 'CONFIRMED'})
+            .eq('user_id', userId)
+            .eq('court_id', courtId)
+            .eq('hold_expires_at', holdExpiresAt);
+      } else {
+        // Single confirmation
+        slotIds = [bookingDetails['slot_id'] as String];
+        await _client
+            .from('bookings')
+            .update({'status': 'CONFIRMED'})
+            .eq('id', bookingId);
+      }
+
+      // 2. Update slot status to BOOKED
+      if (slotIds.isNotEmpty) {
+        await _client
+            .from('court_slots')
+            .update({'status': 'BOOKED'})
+            .inFilter('id', slotIds);
+      }
     } catch (e) {
       debugPrint('Confirm booking error: $e');
       rethrow;
@@ -124,8 +202,6 @@ class SupabaseBookingsRepository implements BookingsRepository {
       await _client
           .from('bookings')
           .update({'status': 'COMPLETED'}).eq('id', bookingId);
-
-      // Notification is handled by SQL Trigger
     } catch (e) {
       debugPrint('Complete booking error: $e');
       rethrow;

@@ -59,10 +59,14 @@ class MyApp extends StatelessWidget {
           themeMode: ThemeMode.light,
           // 🚨 CRITICAL: NEVER REMOVE OR MODIFY
           builder: (context, child) {
+            final mediaQueryData = MediaQuery.of(context);
             return MediaQuery(
-              data: MediaQuery.of(
-                context,
-              ).copyWith(textScaler: TextScaler.linear(1.0)),
+              data: mediaQueryData.copyWith(
+                textScaler: TextScaler.linear(1.0),
+                viewInsets: mediaQueryData.viewInsets.copyWith(
+                  bottom: mediaQueryData.viewInsets.bottom.clamp(0.0, double.infinity),
+                ),
+              ),
               child: child!,
             );
           },
