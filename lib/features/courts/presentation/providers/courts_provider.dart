@@ -137,6 +137,18 @@ class CourtsNotifier extends Notifier<CourtsState> {
     subscribeToSlots();
   }
 
+  Future<void> addCourt(int courtNumber) async {
+    try {
+      final newCourt = await _courtsRepository!.addCourt(courtNumber: courtNumber);
+      // Update local state by adding the new court and sorting
+      final updatedCourts = [...state.courts, newCourt]..sort((a, b) => a.courtNumber.compareTo(b.courtNumber));
+      state = state.copyWith(courts: updatedCourts);
+    } catch (e) {
+      debugPrint('Add court error: $e');
+      rethrow;
+    }
+  }
+
   void selectCourt(int index) {
     _slotsSubscription?.unsubscribe();
     state = state.copyWith(selectedCourtIndex: index);

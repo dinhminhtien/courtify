@@ -8,7 +8,6 @@ import '../../data/repositories/supabase_auth_repository.dart';
 import '../../../courts/presentation/providers/courts_provider.dart';
 import '../../../booking/presentation/providers/bookings_provider.dart';
 import '../../../payment/presentation/providers/payment_provider.dart';
-import '../../../owner/presentation/providers/owner_dashboard_provider.dart';
 
 // ─── Repository Provider ──────────────────────────────────────────────────────
 
@@ -129,13 +128,21 @@ class AuthNotifier extends Notifier<AuthState> {
 
   Future<void> signOut() async {
     await _authRepository.signOut();
-    // Invalidate session-specific providers
-    ref.invalidate(courtsProvider);
-    ref.invalidate(bookingsProvider);
-    ref.invalidate(paymentProvider);
-    ref.invalidate(ownerDashboardProvider);
     
+    // Set state to null FIRST to signal all UI listeners
     state = const AuthState(user: null);
+    
+    // Defer invalidation of other providers to the next microtask 
+    // to avoid circular dependency issues while Riverpod is rebuilding.
+    // We don't need to invalidate ownerDashboardProvider because it already watches 
+    // currentUserProvider and will rebuild automatically.
+    Future.microtask(() {
+      if (ref.mounted) {
+        ref.invalidate(courtsProvider);
+        ref.invalidate(bookingsProvider);
+        ref.invalidate(paymentProvider);
+      }
+    });
   }
 
   Future<void> refreshProfile() async {

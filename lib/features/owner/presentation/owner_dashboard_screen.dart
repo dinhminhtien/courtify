@@ -130,6 +130,93 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
     }
   }
 
+  Future<void> _showAddCourtDialog() async {
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Thêm sân mới',
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Nhập số hiệu sân bạn muốn thêm vào hệ thống.',
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.muted, fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'Số hiệu sân',
+                hintText: 'VD: 5',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                prefixIcon: const Icon(Icons.numbers_rounded),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(
+              'Hủy',
+              style: GoogleFonts.plusJakartaSans(color: AppTheme.muted),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primary,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: Text(
+              'Thêm',
+              style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && controller.text.isNotEmpty && mounted) {
+      final courtNumber = int.tryParse(controller.text);
+      if (courtNumber == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Vui lòng nhập số hợp lệ')),
+        );
+        return;
+      }
+
+      try {
+        await ref.read(courtsProvider.notifier).addCourt(courtNumber);
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Đã thêm Sân số $courtNumber'),
+            backgroundColor: AppTheme.success,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Không thể thêm sân. Vui lòng thử lại.'),
+            backgroundColor: AppTheme.error,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width >= 600;
@@ -202,7 +289,34 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildInternalHeader('Quản lý sân'),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 24, 20, 16),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Quản lý sân',
+                style: GoogleFonts.plusJakartaSans(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.primary,
+                ),
+              ),
+              ElevatedButton.icon(
+                onPressed: _showAddCourtDialog,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Thêm sân'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primary,
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
+              ),
+            ],
+          ),
+        ),
         Expanded(
           child: courtsState.isLoading
               ? const Center(child: CircularProgressIndicator())

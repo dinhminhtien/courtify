@@ -15,4 +15,6 @@ abstract class CourtsRepository {
     required DateTime date,
     required void Function(List<CourtSlotEntity>) onUpdate,
   });
+
+  Future<CourtEntity> addCourt({required int courtNumber});
 }
