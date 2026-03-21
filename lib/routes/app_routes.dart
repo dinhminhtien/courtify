@@ -6,6 +6,7 @@ import '../features/booking/presentation/booking_history_screen.dart';
 import '../features/courts/presentation/home_screen.dart';
 import '../features/owner/presentation/owner_dashboard_screen.dart';
 import '../features/payment/presentation/payment_screen.dart';
+import '../features/payment/presentation/payment_callback_screen.dart';
 import '../features/auth/presentation/sign_up_login_screen.dart';
 import '../features/auth/presentation/profile_screen.dart';
 import '../features/auth/presentation/onboarding_screen.dart';
@@ -79,7 +80,28 @@ class AppRoutes {
 
   };
 
+  static const String paymentSuccess = '/success';
+  static const String paymentCancel = '/cancel';
+
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
+    if (settings.name == null) {
+      return _buildRoute(
+        const Scaffold(body: Center(child: Text('Không tìm thấy trang'))),
+      );
+    }
+    
+    // Parse Uri to handle query parameters from PayOS redirects (like /success?orderCode=123)
+    final uri = Uri.parse(settings.name!);
+    
+    if (uri.path == paymentSuccess || uri.path == paymentCancel) {
+      return _buildRoute(
+         RouteGuard(
+           routeName: uri.path,
+           child: PaymentCallbackScreen(queryParams: uri.queryParameters),
+         )
+      );
+    }
+
     switch (settings.name) {
       case bookingConfirmation:
         final args = settings.arguments as Map<String, dynamic>?;

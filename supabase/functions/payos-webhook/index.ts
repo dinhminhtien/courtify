@@ -11,13 +11,22 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 
 const supabase = createClient(SUPABASE_URL!, SUPABASE_SERVICE_ROLE_KEY!)
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders })
+  }
+
   try {
     const body = await req.json()
     const { code, data, signature } = body
 
     if (code !== "00") {
-      return new Response(JSON.stringify({ ok: true, message: "Ignored" }), { status: 200 })
+      return new Response(JSON.stringify({ ok: true, message: "Ignored" }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 })
     }
 
     if (data.status === "PAID") {
@@ -31,7 +40,7 @@ serve(async (req: Request) => {
         .single()
 
       if (error || !payment) {
-        return new Response(JSON.stringify({ ok: false, error: "Payment not found" }), { status: 404 })
+        return new Response(JSON.stringify({ ok: false, error: "Payment not found" }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 404 })
       }
 
       if (payment.status !== "PAID") {
@@ -94,9 +103,9 @@ serve(async (req: Request) => {
       }
     }
 
-    return new Response(JSON.stringify({ ok: true }), { status: 200 })
+    return new Response(JSON.stringify({ ok: true }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 })
   } catch (err: any) {
     console.error("Webhook Error:", err)
-    return new Response(JSON.stringify({ ok: false, error: err.message }), { status: 500 })
+    return new Response(JSON.stringify({ ok: false, error: err.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 })
   }
 })
