@@ -12,6 +12,8 @@ class BookingEntity {
   final DateTime? holdExpiresAt;
   final DateTime? createdAt;
   final int? orderCode;
+  final String? paymentMethod;
+
   
   // Joined fields
   final CourtSlotEntity? slot;
@@ -28,10 +30,12 @@ class BookingEntity {
     this.holdExpiresAt,
     this.createdAt,
     this.orderCode,
+    this.paymentMethod,
     this.slot,
     this.court,
     this.user,
   });
+
 
   Map<String, dynamic> toDisplayMap() {
     final slotDate = slot?.slotDate ?? DateTime.now();
@@ -58,10 +62,12 @@ class BookingEntity {
       'paymentStatus': paymentStatus,
       'customerName': customerName,
       'avatarLetter': avatarLetter,
+      'paymentMethod': paymentMethod ?? 'CHƯA CÓ',
       'createdAt': createdAt?.toIso8601String(),
       'isUpcoming': holdExpiresAt != null
           ? holdExpiresAt!.isAfter(DateTime.now())
           : (status == 'PENDING' || status == 'CONFIRMED'),
     };
+
   }
 }

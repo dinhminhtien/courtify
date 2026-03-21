@@ -1,19 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../../../../shared/widgets/status_badge_widget.dart';
+import '../providers/owner_dashboard_provider.dart';
 
-class OwnerRecentBookingsWidget extends StatelessWidget {
-  final List<Map<String, dynamic>> bookings;
+class OwnerRecentBookingsWidget extends ConsumerWidget {
   final ValueChanged<String> onConfirm;
   final ValueChanged<String> onComplete;
 
   const OwnerRecentBookingsWidget({
     super.key,
-    required this.bookings,
     required this.onConfirm,
     required this.onComplete,
   });
+
 
   BookingStatus _parseStatus(String s) {
     switch (s) {
@@ -38,8 +39,24 @@ class OwnerRecentBookingsWidget extends StatelessWidget {
     return result.toString();
   }
 
+  String _translatePaymentMethod(String? method) {
+
+    if (method == null || method == 'CHƯA CÓ') return 'Chưa thanh toán';
+    switch (method.toLowerCase()) {
+      case 'cash':
+        return 'Tiền mặt';
+      case 'bank_transfer':
+        return 'Chuyển khoản';
+      default:
+        return method;
+    }
+  }
+
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final bookings = ref.watch(ownerDashboardProvider).bookings;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
@@ -157,8 +174,18 @@ class OwnerRecentBookingsWidget extends StatelessWidget {
                           ),
                           const SizedBox(height: 3),
                           StatusBadgeWidget.booking(status),
+                          const SizedBox(height: 4),
+                          Text(
+                            _translatePaymentMethod(booking['paymentMethod'] as String?),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.muted,
+                            ),
+                          ),
                         ],
                       ),
+
                     ],
                   ),
                   if (isPending || isConfirmed) ...[
@@ -172,19 +199,22 @@ class OwnerRecentBookingsWidget extends StatelessWidget {
                           _ActionButton(
                             label: 'Xác nhận',
                             icon: Icons.check_rounded,
-                            color: AppTheme.success,
-                            bgColor: AppTheme.primaryContainer,
+                            color: const Color(0xFF2E7D32),
+                            iconColor: Colors.white,
+                            bgColor: const Color(0xFFE8F5E9),
                             onPressed: () => onConfirm(booking['id'] as String),
                           ),
                         if (isConfirmed)
                           _ActionButton(
                             label: 'Hoàn tất',
                             icon: Icons.task_alt_rounded,
-                            color: AppTheme.info,
+                            color: const Color(0xFF1565C0),
+                            iconColor: Colors.white,
                             bgColor: const Color(0xFFE3F2FD),
                             onPressed: () =>
                                 onComplete(booking['id'] as String),
                           ),
+
                         const SizedBox(width: 8),
                         _ActionButton(
                           label: 'Chi tiết',
@@ -210,6 +240,7 @@ class _ActionButton extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
+  final Color? iconColor;
   final Color bgColor;
   final VoidCallback onPressed;
 
@@ -217,9 +248,11 @@ class _ActionButton extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.color,
+    this.iconColor,
     required this.bgColor,
     required this.onPressed,
   });
+
 
   @override
   Widget build(BuildContext context) {
@@ -228,25 +261,26 @@ class _ActionButton extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: bgColor,
+          color: iconColor != null ? color : bgColor,
           borderRadius: BorderRadius.circular(7),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: color),
+            Icon(icon, size: 14, color: iconColor ?? color),
             const SizedBox(width: 5),
             Text(
               label,
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: color,
+                color: iconColor != null ? Colors.white : color,
               ),
             ),
           ],
         ),
       ),
+
     );
   }
 }

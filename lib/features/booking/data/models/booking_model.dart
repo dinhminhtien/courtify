@@ -14,7 +14,9 @@ class BookingModel extends BookingEntity {
     super.holdExpiresAt,
     super.createdAt,
     super.orderCode,
+    super.paymentMethod,
     super.slot,
+
     super.court,
     super.user,
   });
@@ -42,7 +44,18 @@ class BookingModel extends BookingEntity {
     user: json['users'] != null
         ? UserModel.fromJson(json['users'] as Map<String, dynamic>)
         : null,
+    paymentMethod: _parsePaymentMethod(json['payments']),
   );
+
+  static String? _parsePaymentMethod(dynamic payments) {
+    if (payments == null) return null;
+    if (payments is Map) return payments['payment_method'] as String?;
+    if (payments is List && payments.isNotEmpty) {
+      return (payments.first as Map<String, dynamic>)['payment_method'] as String?;
+    }
+    return null;
+  }
+
 
   Map<String, dynamic> toJson() => {
     'id': id,
