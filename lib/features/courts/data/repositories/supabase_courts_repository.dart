@@ -33,29 +33,46 @@ class SupabaseCourtsRepository implements CourtsRepository {
       final dateStr =
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 
-      // 1. Lazy Release: Check and release expired holds
-      // This ensures that when a user views slots, they see the most up-to-date availability
+      // 1. Lazy Release: Clean up dangling 'HOLD' slots
+      // Finds slots that are 'HOLD' but no longer have an active/valid PENDING booking
       try {
         final now = DateTime.now().toUtc().toIso8601String();
         
-        // Find bookings that have expired holds
-        final expiredBookings = await _client
-            .from('bookings')
-            .select('id, slot_id')
-            .eq('status', 'PENDING')
-            .lt('hold_expires_at', now);
+        // Find all HOLD slots for this court and date
+        final holdSlots = await _client
+            .from('court_slots')
+            .select('id')
+            .eq('court_id', courtId)
+            .eq('slot_date', dateStr)
+            .eq('status', 'HOLD');
 
-        if ((expiredBookings as List).isNotEmpty) {
-           final bookingIds = expiredBookings.map((b) => b['id'] as String).toList();
-           final slotIds = expiredBookings.map((b) => b['slot_id'] as String).toList();
+        if ((holdSlots as List).isNotEmpty) {
+           final holdSlotIds = holdSlots.map((s) => s['id'] as String).toList();
            
-           // Update bookings to CANCELLED
-           await _client.from('bookings').update({'status': 'CANCELLED'}).inFilter('id', bookingIds);
+           // Check which of these actually have a VALID (non-expired) PENDING booking
+           final validBookings = await _client
+               .from('bookings')
+               .select('slot_id')
+               .eq('status', 'PENDING')
+               .inFilter('slot_id', holdSlotIds)
+               .gt('hold_expires_at', now);
            
-           // Update slots to AVAILABLE
-           await _client.from('court_slots').update({'status': 'AVAILABLE'}).inFilter('id', slotIds);
+           final validSlotIds = (validBookings as List).map((b) => b['slot_id'] as String).toSet();
            
-           debugPrint('Auto-released ${slotIds.length} expired slots');
+           // Any slot that is 'HOLD' but NOT in validSlotIds should be released
+           final slotsToRelease = holdSlotIds.where((id) => !validSlotIds.contains(id)).toList();
+           
+           if (slotsToRelease.isNotEmpty) {
+              await _client.from('court_slots').update({'status': 'AVAILABLE'}).inFilter('id', slotsToRelease);
+              
+              // Also ensures any expired PENDING bookings for these slots are marked CANCELLED
+              await _client.from('bookings').update({'status': 'CANCELLED'})
+                  .inFilter('slot_id', slotsToRelease)
+                  .eq('status', 'PENDING')
+                  .lt('hold_expires_at', now);
+                  
+              debugPrint('Auto-released ${slotsToRelease.length} dangling/expired slots');
+           }
         }
       } catch (e) {
         debugPrint('Lazy release error (ignored): $e');
