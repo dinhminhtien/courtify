@@ -17,4 +17,6 @@ abstract class CourtsRepository {
   });
 
   Future<CourtEntity> addCourt({required int courtNumber});
+  Future<void> updateSlotsStatus({required List<String> slotIds, required String status});
 }
+

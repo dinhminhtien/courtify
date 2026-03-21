@@ -91,7 +91,8 @@ class OwnerKpiGridWidget extends ConsumerWidget {
                 children: kpis.map((kpi) {
                   return SizedBox(
                     width: itemWidth,
-                    height: itemWidth * 0.65,
+                    height: itemWidth * 0.85,
+
                     child: _KpiCard(
                       label: kpi['label'] as String,
                       value: kpi['value'] as String,

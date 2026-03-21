@@ -14,6 +14,8 @@ import './widgets/owner_revenue_chart_widget.dart';
 import '../../../shared/widgets/custom_error_widget.dart';
 import '../../notifications/presentation/providers/notification_provider.dart';
 import '../../courts/presentation/providers/courts_provider.dart';
+import '../../courts/domain/entities/court_slot.dart';
+
 
 
 class OwnerDashboardScreen extends ConsumerStatefulWidget {
@@ -217,6 +219,206 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
     }
   }
 
+
+  Future<void> _showLockSlotDialog() async {
+    final courts = ref.read(courtsProvider).courts;
+    if (courts.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Vui lòng thêm sân trước khi khóa slot')),
+      );
+      return;
+    }
+
+    String selectedCourtId = courts[0].id;
+    DateTime selectedDate = DateTime.now();
+    Set<String> selectedSlotIds = {};
+
+    await showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Khóa/Mở khóa khung giờ', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700)),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Court & Date selection
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: selectedCourtId,
+                        decoration: InputDecoration(
+                          labelText: 'Chọn sân',
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        ),
+                        items: courts.map((c) => DropdownMenuItem(
+                          value: c.id,
+                          child: Text(c.label),
+                        )).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setDialogState(() {
+                              selectedCourtId = val;
+                              selectedSlotIds.clear();
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(Icons.calendar_month_rounded, color: AppTheme.primary),
+                      onPressed: () async {
+                        final date = await showDatePicker(
+                          context: context,
+                          initialDate: selectedDate,
+                          firstDate: DateTime.now().subtract(const Duration(days: 7)),
+                          lastDate: DateTime.now().add(const Duration(days: 30)),
+                        );
+                        if (date != null) {
+                          setDialogState(() {
+                            selectedDate = date;
+                            selectedSlotIds.clear();
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Chọn khung giờ (${selectedDate.day}/${selectedDate.month}/${selectedDate.year}):',
+                  style: GoogleFonts.plusJakartaSans(fontSize: 14, fontWeight: FontWeight.w600, color: AppTheme.muted),
+                ),
+                const SizedBox(height: 8),
+                Flexible(
+                  child: FutureBuilder<List<CourtSlotEntity>>(
+                    future: ref.read(courtsRepositoryProvider).getSlotsForCourtAndDate(
+                      courtId: selectedCourtId,
+                      date: selectedDate,
+                    ),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+                      }
+                      if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Padding(padding: EdgeInsets.all(20), child: Text('Không có dữ liệu khung giờ'));
+                      }
+
+                      final now = DateTime.now();
+                      final isToday = selectedDate.year == now.year && selectedDate.month == now.month && selectedDate.day == now.day;
+                      
+                      final slots = snapshot.data!.where((slot) {
+                        if (!isToday) return true;
+                        
+                        // Parse startTime (HH:mm:ss)
+                        final timeParts = slot.startTime.split(':');
+                        if (timeParts.length < 2) return true;
+                        final hour = int.tryParse(timeParts[0]) ?? 0;
+                        final minute = int.tryParse(timeParts[1]) ?? 0;
+                        
+                        // Create a DateTime for the slot's start time today
+                        final slotDateTime = DateTime(now.year, now.month, now.day, hour, minute);
+                        
+                        // Only show if slot hasn't started yet or is currently in progress (allow buffer)
+                        return slotDateTime.isAfter(now.subtract(const Duration(minutes: 30)));
+                      }).toList();
+
+                      if (slots.isEmpty) {
+                        return const Padding(padding: EdgeInsets.all(20), child: Text('Không có khung giờ khả dụng tiếp theo'));
+                      }
+
+                      return ListView.builder(
+
+                        shrinkWrap: true,
+                        itemCount: slots.length,
+                        itemBuilder: (ctx, idx) {
+                          final slot = slots[idx];
+                          final isBlocked = slot.status == 'BLOCKED';
+                          final isBooked = slot.status == 'BOOKED';
+                          final isSelected = selectedSlotIds.contains(slot.id);
+
+                          return CheckboxListTile(
+                            dense: true,
+                            title: Text('${slot.startTime.substring(0, 5)} - ${slot.endTime.substring(0, 5)}',
+                                style: TextStyle(
+                                  color: isBooked ? AppTheme.muted : (isBlocked ? AppTheme.error : null),
+                                  decoration: isBooked ? TextDecoration.lineThrough : null,
+                                )),
+                            subtitle: Text(isBooked ? 'Đã đặt' : (isBlocked ? 'Đang khóa' : 'Còn trống')),
+                            value: isSelected || (isBlocked && !selectedSlotIds.contains(slot.id)),
+                            onChanged: isBooked ? null : (val) {
+                              setDialogState(() {
+                                if (isSelected) {
+                                  selectedSlotIds.remove(slot.id);
+                                } else {
+                                  selectedSlotIds.add(slot.id);
+                                }
+                              });
+                            },
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Đóng'),
+            ),
+            const Spacer(),
+            // Unlock Button
+            OutlinedButton(
+              onPressed: selectedSlotIds.isEmpty ? null : () async {
+                try {
+                  await ref.read(courtsProvider.notifier).unlockSlots(selectedSlotIds.toList());
+                  if (mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã mở khóa các khung giờ được chọn')));
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lỗi khi mở khóa slot')));
+                }
+              },
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: AppTheme.success),
+                foregroundColor: AppTheme.success,
+              ),
+              child: const Text('Mở khóa'),
+            ),
+            const SizedBox(width: 8),
+            // Lock Button
+            ElevatedButton(
+              onPressed: selectedSlotIds.isEmpty ? null : () async {
+                try {
+                  await ref.read(courtsProvider.notifier).lockSlots(selectedSlotIds.toList());
+                  if (mounted) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã khóa các khung giờ được chọn')));
+                  }
+                } catch (e) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lỗi khi khóa slot')));
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primary, foregroundColor: Colors.white),
+              child: const Text('Khóa'),
+            ),
+          ],
+
+        ),
+      ),
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     final isTablet = MediaQuery.of(context).size.width >= 600;
@@ -268,7 +470,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
       ),
       floatingActionButton: _currentTab == OwnerNavTab.dashboard
           ? FloatingActionButton.extended(
-              onPressed: () {},
+              onPressed: _showLockSlotDialog,
               backgroundColor: AppTheme.primary,
               foregroundColor: Colors.white,
               icon: const Icon(Icons.lock_outline_rounded, size: 20),
@@ -281,6 +483,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
               ),
               elevation: 2,
             )
+
           : null,
     );
   }
