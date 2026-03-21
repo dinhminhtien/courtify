@@ -249,7 +249,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: selectedCourtId,
+                        initialValue: selectedCourtId,
                         decoration: InputDecoration(
                           labelText: 'Chọn sân',
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12),
@@ -380,11 +380,11 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
               onPressed: selectedSlotIds.isEmpty ? null : () async {
                 try {
                   await ref.read(courtsProvider.notifier).unlockSlots(selectedSlotIds.toList());
-                  if (mounted) {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã mở khóa các khung giờ được chọn')));
-                  }
+                  if (!context.mounted) return;
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã mở khóa các khung giờ được chọn')));
                 } catch (e) {
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lỗi khi mở khóa slot')));
                 }
               },
@@ -400,11 +400,11 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
               onPressed: selectedSlotIds.isEmpty ? null : () async {
                 try {
                   await ref.read(courtsProvider.notifier).lockSlots(selectedSlotIds.toList());
-                  if (mounted) {
-                    Navigator.pop(ctx);
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã khóa các khung giờ được chọn')));
-                  }
+                  if (!context.mounted) return;
+                  Navigator.pop(ctx);
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Đã khóa các khung giờ được chọn')));
                 } catch (e) {
+                  if (!context.mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Lỗi khi khóa slot')));
                 }
               },
@@ -622,7 +622,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                   ),
                   onDeleted: () => notifier.setDateFilter(null),
                   deleteIcon: const Icon(Icons.close, size: 14),
-                  backgroundColor: AppTheme.primaryContainer.withOpacity(0.5),
+                  backgroundColor: AppTheme.primaryContainer.withValues(alpha:0.5),
                 ),
               ],
             ],
@@ -636,7 +636,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Icon(Icons.filter_list_off_rounded,
-                          size: 64, color: AppTheme.muted.withOpacity(0.3)),
+                          size: 64, color: AppTheme.muted.withValues(alpha:0.3)),
                       const SizedBox(height: 16),
                       Text(
                         'Không tìm thấy booking nào phù hợp',
@@ -694,7 +694,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
         side: BorderSide(
-          color: isSelected ? AppTheme.primary : AppTheme.outline.withOpacity(0.2),
+          color: isSelected ? AppTheme.primary : AppTheme.outline.withValues(alpha:0.2),
         ),
       ),
     );
@@ -714,15 +714,15 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha:0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
         ],
         border: Border.all(
           color: status == 'PENDING' 
-              ? AppTheme.warning.withOpacity(0.3) 
-              : AppTheme.outline.withOpacity(0.1),
+              ? AppTheme.warning.withValues(alpha:0.3) 
+              : AppTheme.outline.withValues(alpha:0.1),
         ),
       ),
       child: ClipRRect(
@@ -785,7 +785,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
             
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Divider(height: 1, color: AppTheme.outline.withOpacity(0.1)),
+              child: Divider(height: 1, color: AppTheme.outline.withValues(alpha:0.1)),
             ),
 
             // Middle Section: Time & Court
@@ -811,7 +811,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
             // Bottom Section: Payment & Price
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              color: AppTheme.background.withOpacity(0.5),
+              color: AppTheme.background.withValues(alpha:0.5),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -913,7 +913,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha:0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(

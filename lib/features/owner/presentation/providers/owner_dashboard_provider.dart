@@ -134,11 +134,6 @@ class OwnerDashboardNotifier extends Notifier<OwnerDashboardState> {
                         bookingDate.month == now.month && 
                         bookingDate.day == now.day;
         
-        final createdToday = createdAt != null &&
-                            createdAt.year == now.year && 
-                            createdAt.month == now.month && 
-                            createdAt.day == now.day;
-
         final createdYesterday = createdAt != null &&
                                 createdAt.year == yesterday.year && 
                                 createdAt.month == yesterday.month && 
