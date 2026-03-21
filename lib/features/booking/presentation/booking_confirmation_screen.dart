@@ -92,12 +92,10 @@ class _BookingConfirmationScreenState
 
     try {
       final slotIds = _slots.map((s) => s['id'] as String).toList();
+      ref.read(paymentProvider.notifier).reset(); // Reset payment state
       final booking = await ref
           .read(bookingsProvider.notifier)
-          .createBooking(
-            slotIds: slotIds,
-            courtId: _court['id'] as String,
-          );
+          .createBooking(slotIds: slotIds, courtId: _court['id'] as String);
 
       if (!mounted) return;
 
@@ -287,9 +285,7 @@ class _BookingConfirmationScreenState
             price: _totalPrice,
           ),
           const SizedBox(height: 16),
-          PriceBreakdownWidget(
-            slots: _slots,
-          ),
+          PriceBreakdownWidget(slots: _slots),
           const SizedBox(height: 16),
           _buildPaymentMethodSelector(),
           const SizedBox(height: 16),
