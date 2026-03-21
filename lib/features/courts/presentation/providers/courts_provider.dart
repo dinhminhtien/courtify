@@ -156,14 +156,49 @@ class CourtsNotifier extends Notifier<CourtsState> {
     subscribeToSlots();
   }
 
-  List<Map<String, dynamic>> get slotsAsMap => state.slots
-      .map(
-        (s) => s.toMap()
-          ..['courtNumber'] = state.courts.isNotEmpty
-              ? state.courts[state.selectedCourtIndex].courtNumber
-              : 1,
-      )
-      .toList();
+  Future<void> lockSlots(List<String> slotIds) async {
+    try {
+      await _courtsRepository!.updateSlotsStatus(slotIds: slotIds, status: 'BLOCKED');
+      await loadSlots();
+    } catch (e) {
+      debugPrint('Lock slots error: $e');
+      rethrow;
+    }
+  }
+
+  Future<void> unlockSlots(List<String> slotIds) async {
+    try {
+      await _courtsRepository!.updateSlotsStatus(slotIds: slotIds, status: 'AVAILABLE');
+      await loadSlots();
+    } catch (e) {
+      debugPrint('Unlock slots error: $e');
+      rethrow;
+    }
+  }
+
+  List<Map<String, dynamic>> get slotsAsMap {
+    final now = DateTime.now();
+    final isToday = state.selectedDate.year == now.year &&
+        state.selectedDate.month == now.month &&
+        state.selectedDate.day == now.day;
+
+    return state.slots.where((s) {
+      if (!isToday) return true;
+      final parts = s.startTime.split(':');
+      if (parts.length < 2) return true;
+      final h = int.tryParse(parts[0]) ?? 0;
+      final m = int.tryParse(parts[1]) ?? 0;
+      final slotTime = DateTime(now.year, now.month, now.day, h, m);
+      // Chỉ hiện các slot chưa bắt đầu hoặc mới bắt đầu trong vòng 10 phút
+      return slotTime.isAfter(now.subtract(const Duration(minutes: 10)));
+    }).map(
+      (s) => s.toMap()
+        ..['courtNumber'] = state.courts.isNotEmpty
+            ? state.courts[state.selectedCourtIndex].courtNumber
+            : 1,
+    ).toList();
+  }
+
 
   List<Map<String, dynamic>> get courtsAsMap => state.courts
       .map((c) => {'id': c.id, 'number': c.courtNumber, 'label': c.label})

@@ -202,4 +202,14 @@ class SupabaseCourtsRepository implements CourtsRepository {
       rethrow;
     }
   }
+  @override
+  Future<void> updateSlotsStatus({required List<String> slotIds, required String status}) async {
+    try {
+      await _client.from('court_slots').update({'status': status}).inFilter('id', slotIds);
+    } catch (e) {
+      debugPrint('Update slots status error: $e');
+      rethrow;
+    }
+  }
 }
+
