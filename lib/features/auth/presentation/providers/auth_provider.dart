@@ -8,7 +8,6 @@ import '../../data/repositories/supabase_auth_repository.dart';
 import '../../../courts/presentation/providers/courts_provider.dart';
 import '../../../booking/presentation/providers/bookings_provider.dart';
 import '../../../payment/presentation/providers/payment_provider.dart';
-import '../../../owner/presentation/providers/owner_dashboard_provider.dart';
 
 // ─── Repository Provider ──────────────────────────────────────────────────────
 
