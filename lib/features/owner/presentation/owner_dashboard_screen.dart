@@ -227,7 +227,8 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
     if (_currentTab == OwnerNavTab.manage) {
       bodyContent = _buildManageCourtsTab();
     } else if (_currentTab == OwnerNavTab.schedule) {
-      bodyContent = _buildScheduleTab(dashboardState.bookings);
+      bodyContent = _buildScheduleTab();
+
     } else if (_currentTab == OwnerNavTab.settings) {
       bodyContent = _buildSettingsTab();
     } else if (dashboardState.error != null) {
@@ -350,39 +351,407 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
     );
   }
 
-  Widget _buildScheduleTab(List<Map<String, dynamic>> bookings) {
+  Widget _buildScheduleTab() {
+    final dashboardState = ref.watch(ownerDashboardProvider);
+    final notifier = ref.read(ownerDashboardProvider.notifier);
+    final filteredBookings = notifier.filteredBookings;
+
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildInternalHeader('Lịch đặt sân'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _buildInternalHeader('Lịch đặt sân'),
+            Padding(
+              padding: const EdgeInsets.only(right: 20, top: 24),
+              child: IconButton(
+                icon: Icon(
+                  Icons.calendar_month_rounded,
+                  color: dashboardState.dateFilter != null 
+                      ? AppTheme.primary 
+                      : AppTheme.muted,
+                ),
+                onPressed: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: dashboardState.dateFilter ?? DateTime.now(),
+                    firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                  );
+                  notifier.setDateFilter(date);
+                },
+              ),
+            ),
+          ],
+        ),
+        
+        // Payment Method Filter Chips
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+          child: Row(
+            children: [
+              _buildFilterChip(
+                label: 'Tất cả',
+                isSelected: dashboardState.paymentMethodFilter == null,
+                onSelected: (s) => notifier.setPaymentFilter('All'),
+              ),
+              const SizedBox(width: 8),
+              _buildFilterChip(
+                label: 'Tiền mặt',
+                isSelected: dashboardState.paymentMethodFilter == 'cash',
+                onSelected: (s) => notifier.setPaymentFilter('cash'),
+              ),
+              const SizedBox(width: 8),
+              _buildFilterChip(
+                label: 'Online',
+                isSelected: dashboardState.paymentMethodFilter == 'online',
+                onSelected: (s) => notifier.setPaymentFilter('online'),
+              ),
+              if (dashboardState.dateFilter != null) ...[
+                const SizedBox(width: 8),
+                InputChip(
+                  label: Text(
+                    '${dashboardState.dateFilter!.day}/${dashboardState.dateFilter!.month}',
+                    style: const TextStyle(fontSize: 12),
+                  ),
+                  onDeleted: () => notifier.setDateFilter(null),
+                  deleteIcon: const Icon(Icons.close, size: 14),
+                  backgroundColor: AppTheme.primaryContainer.withOpacity(0.5),
+                ),
+              ],
+            ],
+          ),
+        ),
+
         Expanded(
-          child: bookings.isEmpty
-              ? const Center(child: Text('Chưa có lịch đặt nào'))
-              : ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: bookings.length,
-                  itemBuilder: (context, index) {
-                    final booking = bookings[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        title: Text(booking['customerName'] as String),
-                        subtitle: Text('${booking['courtLabel']} · ${booking['startTime']}'),
-                        trailing: Text(
-                          booking['status'] as String,
-                          style: TextStyle(
-                            color: booking['status'] == 'CONFIRMED' ? Colors.green : Colors.orange,
-                            fontWeight: FontWeight.bold,
-                          ),
+          child: filteredBookings.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.filter_list_off_rounded,
+                          size: 64, color: AppTheme.muted.withOpacity(0.3)),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Không tìm thấy booking nào phù hợp',
+                        style: GoogleFonts.plusJakartaSans(
+                          color: AppTheme.muted,
+                          fontSize: 16,
                         ),
                       ),
-                    );
+                      if (dashboardState.paymentMethodFilter != null || dashboardState.dateFilter != null)
+                        TextButton(
+                          onPressed: () {
+                            notifier.setPaymentFilter('All');
+                            notifier.setDateFilter(null);
+                          },
+                          child: const Text('Xóa bộ lọc'),
+                        ),
+                    ],
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 100),
+                  itemCount: filteredBookings.length,
+                  itemBuilder: (context, index) {
+                    final booking = filteredBookings[index];
+                    return _buildDetailedScheduleItem(booking);
                   },
                 ),
         ),
       ],
     );
   }
+
+  Widget _buildFilterChip({
+    required String label,
+    required bool isSelected,
+    required ValueChanged<bool> onSelected,
+  }) {
+    return ChoiceChip(
+      label: Text(
+        label,
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 12,
+          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+          color: isSelected ? Colors.white : AppTheme.muted,
+        ),
+      ),
+      selected: isSelected,
+      onSelected: onSelected,
+      selectedColor: AppTheme.primary,
+      backgroundColor: Colors.white,
+      checkmarkColor: Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(
+          color: isSelected ? AppTheme.primary : AppTheme.outline.withOpacity(0.2),
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildDetailedScheduleItem(Map<String, dynamic> booking) {
+    final status = booking['status'] as String? ?? 'PENDING';
+    final paymentStatus = booking['paymentStatus'] as String? ?? 'UNPAID';
+    final price = booking['price'] as int? ?? 0;
+    final isPaid = paymentStatus == 'PAID';
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: status == 'PENDING' 
+              ? AppTheme.warning.withOpacity(0.3) 
+              : AppTheme.outline.withOpacity(0.1),
+        ),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Column(
+          children: [
+            // Top Section: Info
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  CircleAvatar(
+                    radius: 22,
+                    backgroundColor: status == 'PENDING' 
+                        ? AppTheme.secondaryContainer 
+                        : AppTheme.primaryContainer,
+                    child: Text(
+                      booking['avatarLetter'] as String? ?? 'K',
+                      style: GoogleFonts.plusJakartaSans(
+                        color: status == 'PENDING' ? AppTheme.warning : AppTheme.primary,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          booking['customerName'] as String? ?? 'Khách hàng',
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                            color: const Color(0xFF1C1B1F),
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            Icon(Icons.calendar_month_outlined, size: 12, color: AppTheme.muted),
+                            const SizedBox(width: 4),
+                            Text(
+                              booking['dateFormatted'] as String? ?? '',
+                              style: GoogleFonts.plusJakartaSans(
+                                color: AppTheme.muted,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  _buildStatusBadge(status),
+                ],
+              ),
+            ),
+            
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Divider(height: 1, color: AppTheme.outline.withOpacity(0.1)),
+            ),
+
+            // Middle Section: Time & Court
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildInfoChip(
+                    Icons.sports_tennis_rounded,
+                    booking['courtLabel'] as String? ?? 'Sân',
+                    AppTheme.primary,
+                  ),
+                  _buildInfoChip(
+                    Icons.access_time_filled_rounded,
+                    '${booking['startTime']} - ${booking['endTime']}',
+                    AppTheme.info,
+                  ),
+                ],
+              ),
+            ),
+
+            // Bottom Section: Payment & Price
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: AppTheme.background.withOpacity(0.5),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+
+                        padding: const EdgeInsets.all(2),
+                        decoration: BoxDecoration(
+                          color: isPaid ? AppTheme.success : AppTheme.warning,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isPaid ? Icons.check_rounded : Icons.pending_rounded,
+                          size: 10,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            isPaid ? 'Đã thanh toán' : 'Chưa thanh toán',
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: isPaid ? AppTheme.success : AppTheme.warning,
+                            ),
+                          ),
+
+                          Text(
+                            _translatePaymentMethod(booking['paymentMethod'] as String?),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 10,
+                              color: AppTheme.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  Text(
+                    '${_formatPrice(price)} VND',
+
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: FontWeight.w800,
+                      fontSize: 16,
+                      color: AppTheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String status) {
+    Color color;
+    String label;
+    
+    switch (status) {
+      case 'CONFIRMED':
+        color = AppTheme.success;
+        label = 'Đã xác nhận';
+        break;
+      case 'COMPLETED':
+        color = AppTheme.info;
+        label = 'Hoàn tất';
+        break;
+      case 'CANCELLED':
+        color = AppTheme.error;
+        label = 'Đã hủy';
+        break;
+      default:
+        color = AppTheme.warning;
+        label = 'Chờ xử lý';
+    }
+
+    return _buildStatusBadgeStyle(color, label);
+  }
+
+  String _translatePaymentMethod(String? method) {
+    if (method == null || method == 'CHƯA CÓ') return 'Chưa chọn';
+    switch (method.toLowerCase()) {
+      case 'cash':
+        return 'Tiền mặt';
+      case 'bank_transfer':
+        return 'Chuyển khoản';
+      default:
+        return method;
+    }
+  }
+
+  Widget _buildStatusBadgeStyle(Color color, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Text(
+        label,
+        style: GoogleFonts.plusJakartaSans(
+          color: color,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildInfoChip(IconData icon, String label, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: GoogleFonts.plusJakartaSans(
+            fontWeight: FontWeight.w600,
+            fontSize: 13,
+            color: const Color(0xFF1C1B1F),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatPrice(int amount) {
+    final s = amount.toString();
+    final result = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) result.write('.');
+      result.write(s[i]);
+    }
+    return result.toString();
+  }
+
 
   Widget _buildSettingsTab() {
     return Column(
@@ -442,17 +811,18 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const SizedBox(height: 8),
-              OwnerQuickStatsWidget(bookings: bookings),
+              const OwnerQuickStatsWidget(),
               const SizedBox(height: 16),
-              OwnerKpiGridWidget(bookings: bookings),
+              const OwnerKpiGridWidget(),
               const SizedBox(height: 16),
-              OwnerRevenueChartWidget(),
+              const OwnerRevenueChartWidget(),
               const SizedBox(height: 16),
               OwnerRecentBookingsWidget(
-                bookings: bookings,
                 onConfirm: _handleConfirmBooking,
                 onComplete: _handleCompleteBooking,
               ),
+
+
               const SizedBox(height: 80),
             ],
           ),
@@ -471,12 +841,12 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
+                const Expanded(
                   flex: 55,
                   child: Column(
                     children: [
-                      OwnerKpiGridWidget(bookings: bookings),
-                      const SizedBox(height: 16),
+                      OwnerKpiGridWidget(),
+                      SizedBox(height: 16),
                       OwnerRevenueChartWidget(),
                     ],
                   ),
@@ -485,11 +855,11 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
                 Expanded(
                   flex: 45,
                   child: OwnerRecentBookingsWidget(
-                    bookings: bookings,
                     onConfirm: _handleConfirmBooking,
                     onComplete: _handleCompleteBooking,
                   ),
                 ),
+
               ],
             ),
           ),
@@ -497,6 +867,7 @@ class _OwnerDashboardScreenState extends ConsumerState<OwnerDashboardScreen> {
       ],
     );
   }
+
 
   Widget _buildOwnerAppBar() {
     final now = DateTime.now();

@@ -1,67 +1,64 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/theme/app_theme.dart';
+import '../providers/owner_dashboard_provider.dart';
 
-class OwnerKpiGridWidget extends StatelessWidget {
-  final List<Map<String, dynamic>> bookings;
+class OwnerKpiGridWidget extends ConsumerWidget {
+  const OwnerKpiGridWidget({super.key});
 
-  const OwnerKpiGridWidget({super.key, required this.bookings});
 
   @override
-  Widget build(BuildContext context) {
-    final confirmedCount = bookings
-        .where((b) => b['status'] == 'CONFIRMED')
-        .length;
-    final pendingCount = bookings.where((b) => b['status'] == 'PENDING').length;
-    final paidBookings = bookings
-        .where((b) => b['paymentStatus'] == 'PAID')
-        .toList();
-    final todayRevenue = paidBookings.fold<int>(
-      0,
-      (sum, b) => sum + ((b['price'] as int?) ?? 0),
-    );
-    final utilizationPct =
-        ((confirmedCount +
-                    bookings.where((b) => b['status'] == 'COMPLETED').length) /
-                (6 * 18) *
-                100)
-            .clamp(0, 100)
-            .toStringAsFixed(0);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(ownerDashboardProvider);
+    
+    // Calculate trend percentage for revenue
+    String revenueTrend = '0%';
+    bool revenueTrendUp = true;
+    if (state.yesterdayRevenue > 0) {
+      final diff = state.todayRevenue - state.yesterdayRevenue;
+      final pct = (diff / state.yesterdayRevenue * 100).round();
+      revenueTrend = '${pct > 0 ? '+' : ''}$pct%';
+      revenueTrendUp = pct >= 0;
+    } else if (state.todayRevenue > 0) {
+      revenueTrend = '+100%';
+      revenueTrendUp = true;
+    }
 
     final kpis = [
       {
         'label': 'Doanh thu hôm nay',
-        'value': _formatRevenue(todayRevenue),
+        'value': _formatRevenue(state.todayRevenue),
         'unit': 'VND',
         'icon': Icons.payments_rounded,
         'color': AppTheme.success,
         'bgColor': AppTheme.primaryContainer,
-        'trend': '+12%',
+        'trend': revenueTrend,
+        'trendUp': revenueTrendUp,
+      },
+      {
+        'label': 'Doanh thu dự kiến',
+        'value': _formatRevenue(state.potentialRevenue),
+        'unit': 'VND',
+        'icon': Icons.account_balance_wallet_rounded,
+        'color': AppTheme.info,
+        'bgColor': const Color(0xFFE3F2FD),
+        'trend': 'Đã xác nhận',
         'trendUp': true,
       },
       {
         'label': 'Chờ xác nhận',
-        'value': '$pendingCount',
+        'value': '${state.pendingCount}',
         'unit': 'booking',
         'icon': Icons.hourglass_empty_rounded,
         'color': AppTheme.warning,
         'bgColor': AppTheme.secondaryContainer,
-        'trend': pendingCount > 2 ? 'Cần xử lý' : 'Ổn định',
-        'trendUp': pendingCount <= 2,
-      },
-      {
-        'label': 'Đã xác nhận',
-        'value': '$confirmedCount',
-        'unit': 'booking',
-        'icon': Icons.check_circle_rounded,
-        'color': AppTheme.info,
-        'bgColor': const Color(0xFFE3F2FD),
-        'trend': '+$confirmedCount',
-        'trendUp': true,
+        'trend': state.pendingCount > 0 ? 'Cần xử lý' : 'Hoàn tất',
+        'trendUp': state.pendingCount == 0,
       },
       {
         'label': 'Tỷ lệ lấp đầy',
-        'value': utilizationPct,
+        'value': state.utilizationPct.toStringAsFixed(0),
         'unit': '%',
         'icon': Icons.bar_chart_rounded,
         'color': AppTheme.primary,
@@ -70,6 +67,7 @@ class OwnerKpiGridWidget extends StatelessWidget {
         'trendUp': true,
       },
     ];
+
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -84,27 +82,28 @@ class OwnerKpiGridWidget extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              crossAxisSpacing: 10,
-              mainAxisSpacing: 10,
-              childAspectRatio: 1.55,
-            ),
-            itemCount: kpis.length,
-            itemBuilder: (context, i) {
-              final kpi = kpis[i];
-              return _KpiCard(
-                label: kpi['label'] as String,
-                value: kpi['value'] as String,
-                unit: kpi['unit'] as String,
-                icon: kpi['icon'] as IconData,
-                color: kpi['color'] as Color,
-                bgColor: kpi['bgColor'] as Color,
-                trend: kpi['trend'] as String,
-                trendUp: kpi['trendUp'] as bool,
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final itemWidth = (constraints.maxWidth - 10) / 2;
+              return Wrap(
+                spacing: 10,
+                runSpacing: 10,
+                children: kpis.map((kpi) {
+                  return SizedBox(
+                    width: itemWidth,
+                    height: itemWidth * 0.65,
+                    child: _KpiCard(
+                      label: kpi['label'] as String,
+                      value: kpi['value'] as String,
+                      unit: kpi['unit'] as String,
+                      icon: kpi['icon'] as IconData,
+                      color: kpi['color'] as Color,
+                      bgColor: kpi['bgColor'] as Color,
+                      trend: kpi['trend'] as String,
+                      trendUp: kpi['trendUp'] as bool,
+                    ),
+                  );
+                }).toList(),
               );
             },
           ),

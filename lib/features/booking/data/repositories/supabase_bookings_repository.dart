@@ -55,9 +55,10 @@ class SupabaseBookingsRepository implements BookingsRepository {
     try {
       final data = await _client
           .from('bookings')
-          .select('*, court_slots(*), courts(*), users(*)')
+          .select('*, court_slots(*), courts(*), users(*), payments(payment_method)')
           .eq('user_id', userId)
           .order('created_at', ascending: false);
+
 
       return (data as List).map((e) => BookingModel.fromJson(e)).toList();
     } catch (e) {
@@ -71,8 +72,9 @@ class SupabaseBookingsRepository implements BookingsRepository {
     try {
       final data = await _client
           .from('bookings')
-          .select('*, court_slots(*), courts(*), users(*)')
+          .select('*, court_slots(*), courts(*), users(*), payments(payment_method)')
           .order('created_at', ascending: false);
+
 
       return (data as List).map((e) => BookingModel.fromJson(e)).toList();
     } catch (e) {
